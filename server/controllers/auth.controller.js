@@ -54,7 +54,7 @@ export const register = async (req, res) => {
       role,
       avatar,
       authProvider: "local",
-      isVerified: false,
+      
     });
 
 
@@ -98,7 +98,6 @@ export const login = async (req, res) => {
       });
     }
 
-    // Google Account
     if (user.authProvider === "google") {
       return res.status(400).json({
         success: false,
@@ -106,15 +105,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Email Verification
-    if (!user.isVerified) {
-      return res.status(401).json({
-        success: false,
-        message: "Please verify your email first.",
-      });
-    }
-
-    // Password Check
+   
     const isMatch = await comparePassword(password, user.password);
 
     if (!isMatch) {
@@ -124,32 +115,19 @@ export const login = async (req, res) => {
       });
     }
 
-    // 2FA Enabled
-    if (user.is2FAEnabled) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-      user.loginOTP = otp;
-      user.loginOTPExpire = new Date(Date.now() + 10 * 60 * 1000);
-
-      await user.save();
-
-      await sendMail(
-        user.email,
-        "Login Verification OTP",
-        otpTemplate(otp)
-      );
-
-      return res.status(200).json({
-        success: true,
-        requires2FA: true,
-        message: "OTP sent to your email.",
-      });
-    }
-
-    // Login Success
+    
     const token = generateToken(user._id);
 
+   
     user.password = undefined;
+
+   
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     return res.status(200).json({
       success: true,
@@ -468,7 +446,6 @@ export const sendResetOTP = async (req, res) => {
     });
   }
 };
-
 
 
 
