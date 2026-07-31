@@ -468,3 +468,75 @@ export const sendResetOTP = async (req, res) => {
     });
   }
 };
+
+
+
+
+export const changePassword = async (req, res) => {
+  try {
+    let { email, inputOtp, newPassword } = req.body;
+
+    if (!email || !inputOtp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP and new password are required.",
+      });
+    }
+
+    email = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (!user.passwordResetOTP || !user.passwordResetOTPExpire) {
+      return res.status(400).json({
+        success: false,
+        message: "Please request a password reset OTP first.",
+      });
+    }
+
+  
+    if (Date.now() > user.passwordResetOTPExpire) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+   
+    if (user.passwordResetOTP !== inputOtp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    
+    user.password = hashedPassword;
+    user.passwordResetOTP = undefined;
+    user.passwordResetOTPExpire = undefined;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully. Please login again.",
+    });
+
+  } catch (error) {
+    console.error("Change Password Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};

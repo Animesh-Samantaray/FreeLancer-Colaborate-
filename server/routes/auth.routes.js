@@ -6,6 +6,8 @@ import {
   login,
   logout,
   getMe,
+  sendResetOTP,
+  changePassword,
 } from "../controllers/auth.controller.js";
 
 import authMiddleware from "../middlewares/auth.middleware.js";
@@ -18,12 +20,13 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", authMiddleware, logout);
 
-// User
+router.post("/send-reset-otp", sendResetOTP);
+router.post("/change-password", changePassword);
+
+
 router.get("/me", authMiddleware, getMe);
 
-// Email Verification
-// router.post("/send-verification-otp", sendVerificationOTP);
-// router.post("/verify-email", verifyEmail);
+
 
 // Google Authentication
 router.get(
@@ -47,7 +50,7 @@ router.get(
         );
       }
 
-      // Set provider for Google accounts
+     
       req.user.authProvider = "google";
       req.user.isVerified = true;
       await req.user.save();
