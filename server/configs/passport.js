@@ -49,7 +49,7 @@ passport.use(
           name,
           email,
           avatar,
-          isVerified:true
+          authProvider:"google"
         });
 
         return done(null, user);

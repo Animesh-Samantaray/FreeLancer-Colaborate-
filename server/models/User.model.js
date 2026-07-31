@@ -2,9 +2,10 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    // Basic Information
+    fullName: {
       type: String,
-      required: [true, "Name is required"],
+      required: [true, "Full name is required"],
       trim: true,
     },
 
@@ -16,18 +17,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    password: {
+    phone: {
       type: String,
-      required: function() {
-        return !this.googleId;
-      },
-      minlength: 6,
-      select: false,
-    },
-     googleId: {
-      type: String,
-      unique: true,
-      sparse: true,
+      trim: true,
+      default: "",
     },
 
     avatar: {
@@ -35,32 +28,50 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Authentication
+    password: {
+      type: String,
+      minlength: 6,
+      required: function () {
+        return !this.googleId;
+      },
+      select: false,
+    },
+
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
+
+    // User Role
     role: {
       type: String,
-      default: "Developer",
+      enum: ["client", "freelancer", "admin"],
+      default: "freelancer",
     },
 
-    isVerified:{
-      type:Boolean,
-      default:false,
+    // Email Verification
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
-    emailVerificationOTP:{
-      type:String,
-    },
-    emailVerificationOTPExpire:{
-      type:Date,
-    },
-    loginOTP: {
-  type: String,
-},
 
-loginOTPExpire: {
-  type: Date,
-},
-is2FAEnabled: {
-  type: Boolean,
-  default: true,
-},
+    emailVerificationOTP: String,
+
+    emailVerificationOTPExpire: Date,
+
+    // Forgot Password
+    passwordResetOTP: String,
+
+    passwordResetOTPExpire: Date,
   },
   {
     timestamps: true,
