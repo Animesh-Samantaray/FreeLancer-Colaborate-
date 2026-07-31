@@ -1,4 +1,5 @@
 import { FaBriefcase } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 function Navbar() {
   return (
@@ -65,19 +66,21 @@ function Navbar() {
 
           <div className="flex items-center gap-4">
 
-            <button className="hidden md:block text-slate-700 font-semibold hover:text-blue-600 transition">
+            <Link
+                to="/login"
+                className="hidden md:block text-slate-700 font-semibold hover:text-blue-600 transition"
+            >
+                Login
+            </Link>
 
-              Login
+            <Link
+               to="/register"
+               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition duration-300"
+            >
+                Get Started
+            </Link>
 
-            </button>
-
-            <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition duration-300">
-
-              Get Started
-
-            </button>
-
-          </div>
+</div>
 
         </nav>
 
