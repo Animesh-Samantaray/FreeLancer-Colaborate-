@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   FaLock,
   FaKey,
@@ -12,16 +12,17 @@ import api from "../api/axios";
 
 function ResetPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
-    email: "",
-    otp: "",
-    newPassword: "",
-  });
+const [formData, setFormData] = useState({
+  email: location.state?.email || "",
+  inputOtp: "",
+  newPassword: "",
+});
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -33,7 +34,7 @@ function ResetPassword() {
   const handleResetPassword = async () => {
     if (
       !formData.email ||
-      !formData.otp ||
+      !formData.inputOtp ||
       !formData.newPassword
     ) {
       return toast.error("Please fill all fields");
@@ -111,10 +112,10 @@ function ResetPassword() {
 
             <input
               type="text"
-              name="otp"
+              name="inputOtp"
               placeholder="Enter OTP"
               className="w-full border rounded-xl py-3 pl-12 pr-4 outline-none focus:border-blue-500"
-              value={formData.otp}
+              value={formData.inputOtp}
               onChange={handleChange}
             />
 

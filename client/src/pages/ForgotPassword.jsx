@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaEnvelope } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 
@@ -8,6 +8,7 @@ import api from "../api/axios";
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSendOTP = async () => {
   if (!email) {
@@ -22,8 +23,16 @@ function ForgotPassword() {
     });
 
     if (response.data.success) {
-      toast.success(response.data.message);
-    }
+  toast.success(response.data.message);
+
+  setTimeout(() => {
+    navigate("/reset-password", {
+      state: {
+        email,
+      },
+    });
+  }, 1200);
+}
   } catch (error) {
     toast.error(
       error.response?.data?.message || "Failed to send OTP"
