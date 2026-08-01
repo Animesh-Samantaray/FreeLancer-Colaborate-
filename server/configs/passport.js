@@ -46,7 +46,7 @@ passport.use(
        
         user = await User.create({
           googleId,
-          name,
+          fullName:name,
           email,
           avatar,
           authProvider:"google"

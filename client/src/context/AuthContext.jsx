@@ -10,13 +10,17 @@ export const AuthProvider = ({ children }) => {
   // Check if user is already logged in
   const checkAuth = async () => {
     try {
-      const res = await api.get("/auth/me");
+      const res = await api.get("/me");
 
       if (res.data.success) {
         setUser(res.data.user);
+      } else {
+        setUser(null);
+        localStorage.removeItem("token");
       }
     } catch (error) {
       setUser(null);
+      localStorage.removeItem("token");
     } finally {
       setLoading(false);
     }
@@ -26,12 +30,20 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  const loginUser = (userData, token) => {
+    if (token) {
+      localStorage.setItem("token", token);
+    }
+    setUser(userData);
+  };
+
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post("/logout");
     } catch (error) {
-      console.log(error);
+      console.error("Logout request error:", error);
     } finally {
+      localStorage.removeItem("token");
       setUser(null);
     }
   };
@@ -43,6 +55,7 @@ export const AuthProvider = ({ children }) => {
         setUser,
         loading,
         checkAuth,
+        loginUser,
         logout,
       }}
     >
