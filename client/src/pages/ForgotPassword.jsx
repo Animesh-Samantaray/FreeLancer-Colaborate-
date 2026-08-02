@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEnvelope } from "react-icons/fa";
 import { toast } from "react-hot-toast";
-
 import api from "../api/axios";
 
 function ForgotPassword() {
@@ -10,107 +9,115 @@ function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSendOTP = async () => {
-  if (!email) {
-    return toast.error("Please enter your email");
-  }
+  const validateForm = () => {
+    if (!email) {
+      toast.error("Email is required");
+      return false;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
+    return true;
+  };
 
-  try {
-    setLoading(true);
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-    const response = await api.post("/auth/send-reset-otp", {
-      email,
-    });
+    try {
+      setLoading(true);
+      // Calls POST /api/auth/send-reset-otp
+      const response = await api.post("/send-reset-otp", { email });
 
-    if (response.data.success) {
-  toast.success(response.data.message);
-
-  setTimeout(() => {
-    navigate("/reset-password", {
-      state: {
-        email,
-      },
-    });
-  }, 1200);
-}
-  } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Failed to send OTP"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+      if (response.data.success) {
+        toast.success(response.data.message || "OTP sent successfully to your email!");
+        setTimeout(() => {
+          navigate("/reset-password", {
+            state: { email },
+          });
+        }, 1200);
+      }
+    } catch (error) {
+      console.error("Forgot password component error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 flex items-center justify-center px-6 py-10">
+    <div className="min-h-screen bg-[#09090B] flex items-center justify-center px-4 py-12 relative overflow-hidden bg-gradient-mesh">
+      {/* Background radial glow */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
+      <div className="w-full max-w-md z-10">
+        <div className="glass-card glow-border p-8 rounded-3xl shadow-2xl relative">
+          
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#6366F1] to-[#3B82F6] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/20">
+              <span className="font-bold text-white text-2xl font-display">F</span>
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent font-display">
+              Forgot Password
+            </h1>
+            <p className="text-gray-400 mt-2 text-sm">
+              Enter your email to receive a password reset OTP code
+            </p>
+          </div>
 
-        <div className="text-center mb-8">
+          <form onSubmit={handleSendOTP} className="space-y-6">
+            {/* Email */}
+            <div>
+              <label className="text-xs font-semibold text-gray-300 mb-1.5 block uppercase tracking-wider">
+                Email Address
+              </label>
+              <div className="relative">
+                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm" />
+                <input
+                  type="email"
+                  placeholder="name@example.com"
+                  className="w-full glass-input rounded-xl py-3 pl-12 pr-4 text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
 
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Forgot Password
-          </h1>
+            {/* Send OTP Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full relative group overflow-hidden bg-gradient-to-r from-[#6366F1] to-[#3B82F6] text-white py-3 rounded-xl font-semibold shadow-lg shadow-indigo-500/25 transition-all duration-300 hover:shadow-indigo-500/35 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Sending OTP code...</span>
+                </div>
+              ) : (
+                <span>Request OTP Code</span>
+              )}
+            </button>
+          </form>
 
-          <p className="text-gray-500 mt-2">
-            Enter your email to receive an OTP.
+          {/* Back to Login Link */}
+          <p className="text-center mt-8 text-gray-400 text-sm">
+            Remembered your password?
+            <Link
+              to="/login"
+              className="text-[#6366F1] font-semibold ml-1.5 hover:text-[#3B82F6] hover:underline transition"
+            >
+              Sign In
+            </Link>
           </p>
 
         </div>
-
-        {/* Email */}
-
-        <div className="mb-6">
-
-          <label className="font-medium mb-2 block">
-            Email
-          </label>
-
-          <div className="relative">
-
-            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="w-full border rounded-xl py-3 pl-12 pr-4 outline-none focus:border-blue-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-
-          </div>
-
-        </div>
-                {/* Send OTP Button */}
-
-        <button
-           type="button"
-           onClick={handleSendOTP}
-           disabled={loading}
-        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition duration-300 disabled:opacity-60"
-            >
-          {loading ? "Sending OTP..." : "Send OTP"}
-        </button>
-
-        {/* Back to Login */}
-
-        <p className="text-center mt-8 text-gray-600">
-
-          Remember your password?
-
-          <Link
-            to="/login"
-            className="text-blue-600 font-semibold ml-2 hover:underline"
-          >
-            Login
-          </Link>
-
-        </p>
-              </div>
-
+      </div>
     </div>
   );
 }
