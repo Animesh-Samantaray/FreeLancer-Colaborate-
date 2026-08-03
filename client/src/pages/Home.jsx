@@ -23,7 +23,10 @@ function Home() {
   // Automatically redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      if (user.role === "client") navigate("/client");
+      else if (user.role === "freelancer") navigate("/freelancer");
+      else if (user.role === "admin") navigate("/admin");
+      else navigate("/dashboard");
     }
   }, [user, navigate]);
 

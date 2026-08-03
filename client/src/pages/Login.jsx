@@ -48,13 +48,21 @@ function Login() {
 
     try {
       setLoading(true);
-      // Calls POST /api/auth/login
-      const response = await api.post("/login", formData);
+      const response = await api.post("/auth/login", formData);
 
       if (response.data.success) {
         toast.success(response.data.message || "Welcome back!");
         loginUser(response.data.user, response.data.token);
-        navigate("/dashboard");
+
+        const redirectPath = response.data.user.role === "client"
+          ? "/client"
+          : response.data.user.role === "freelancer"
+          ? "/freelancer"
+          : response.data.user.role === "admin"
+          ? "/admin"
+          : "/dashboard";
+
+        navigate(redirectPath);
       }
     } catch (error) {
       // Errors are caught and toasted by our Axios interceptor, but we still handle loading state

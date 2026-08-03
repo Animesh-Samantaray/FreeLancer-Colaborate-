@@ -5,21 +5,28 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("token") || null);
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in
-  const checkAuth = async () => {
+  const fetchCurrentUser = async () => {
     try {
-      const res = await api.get("/me");
+      setLoading(true);
+      const res = await api.get("/auth/me");
 
       if (res.data.success) {
         setUser(res.data.user);
+        setRole(res.data.user.role);
       } else {
         setUser(null);
+        setRole(null);
+        setToken(null);
         localStorage.removeItem("token");
       }
     } catch (error) {
       setUser(null);
+      setRole(null);
+      setToken(null);
       localStorage.removeItem("token");
     } finally {
       setLoading(false);
@@ -27,24 +34,29 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    checkAuth();
+    fetchCurrentUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loginUser = (userData, token) => {
-    if (token) {
-      localStorage.setItem("token", token);
+  const loginUser = (userData, tokenValue) => {
+    if (tokenValue) {
+      localStorage.setItem("token", tokenValue);
+      setToken(tokenValue);
     }
     setUser(userData);
+    setRole(userData?.role || null);
   };
 
   const logout = async () => {
     try {
-      await api.post("/logout");
+      await api.post("/auth/logout");
     } catch (error) {
       console.error("Logout request error:", error);
     } finally {
       localStorage.removeItem("token");
+      setToken(null);
       setUser(null);
+      setRole(null);
     }
   };
 
@@ -52,9 +64,10 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        token,
+        role,
         loading,
-        checkAuth,
+        fetchCurrentUser,
         loginUser,
         logout,
       }}

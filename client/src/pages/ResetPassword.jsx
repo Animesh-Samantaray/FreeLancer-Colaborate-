@@ -52,8 +52,7 @@ function ResetPassword() {
 
     try {
       setLoading(true);
-      // Calls POST /api/auth/change-password
-      const response = await api.post("/change-password", formData);
+      const response = await api.post("/auth/change-password", formData);
 
       if (response.data.success) {
         toast.success(response.data.message || "Password updated successfully!");
