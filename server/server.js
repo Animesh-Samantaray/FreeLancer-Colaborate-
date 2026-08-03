@@ -4,7 +4,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
+import projectRoutes from './routes/project.route.js';
 import authRoutes from "./routes/auth.routes.js";
 
 
@@ -42,6 +42,8 @@ mongoose
 
 
 app.use("/api/auth", authRoutes);
+app.use("/api/project", projectRoutes);
+
 
 
 app.use("/api/ai" ,  aiRoutes);
