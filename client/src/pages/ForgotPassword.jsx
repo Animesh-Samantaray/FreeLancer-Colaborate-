@@ -27,8 +27,7 @@ function ForgotPassword() {
 
     try {
       setLoading(true);
-      // Calls POST /api/auth/send-reset-otp
-      const response = await api.post("/send-reset-otp", { email });
+      const response = await api.post("/auth/send-reset-otp", { email });
 
       if (response.data.success) {
         toast.success(response.data.message || "OTP sent successfully to your email!");

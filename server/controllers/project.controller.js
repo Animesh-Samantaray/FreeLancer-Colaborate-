@@ -63,10 +63,20 @@ export const createProject = async (req, res) => {
 export const getAllProjects = async (req, res) => {
   try {
     const userId = req.user.id;
+    const userRole = req.user.role;
 
-    const projects = await Project.find({ client: userId }).sort({
-      createdAt: -1,
-    });
+    let query = {};
+    if (userRole === "client") {
+      query = { client: userId };
+    } else if (userRole === "freelancer") {
+      query = { visibility: { $ne: "Private" } };
+    } else if (userRole === "admin") {
+      query = {};
+    }
+
+    const projects = await Project.find(query)
+      .populate("client", "fullName email avatar")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -90,11 +100,14 @@ export const getProjectById = async (req, res) => {
   try {
     const projectId = req.params.id;
     const userId = req.user.id;
+    const userRole = req.user.role;
 
-    const project = await Project.findOne({
-      _id: projectId,
-      client: userId,
-    });
+    let query = { _id: projectId };
+    if (userRole === "client") {
+      query.client = userId;
+    }
+
+    const project = await Project.findOne(query).populate("client", "fullName email avatar");
 
     if (!project) {
       return res.status(404).json({

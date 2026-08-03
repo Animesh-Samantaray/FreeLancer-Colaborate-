@@ -8,6 +8,7 @@ import {
   getMe,
   sendResetOTP,
   changePassword,
+  getAllUsers,
 } from "../controllers/auth.controller.js";
 
 import authMiddleware from "../middlewares/auth.middleware.js";
@@ -25,6 +26,7 @@ router.post("/change-password", changePassword);
 
 
 router.get("/me", authMiddleware, getMe);
+router.get("/users", authMiddleware, getAllUsers);
 
 
 

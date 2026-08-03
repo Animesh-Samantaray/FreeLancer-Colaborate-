@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 import { Toaster } from "react-hot-toast";
 
 // Public Pages
@@ -12,8 +13,22 @@ import ResetPassword from "./pages/ResetPassword";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
-// Protected Pages
-import Dashboard from "./pages/Dashboard";
+// Client Pages
+import ClientDashboard from "./pages/client/Dashboard";
+import CreateProject from "./pages/client/CreateProject";
+import MyProject from "./pages/client/MyProject";
+
+// Freelancer Pages
+import FreelancerDashboard from "./pages/freelancer/Dashboard";
+import BrowseProjects from "./pages/freelancer/BrowseProjects";
+import ProjectDetails from "./pages/freelancer/ProjectDetails";
+
+// Admin Pages
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProjects from "./pages/admin/Projects";
+import AdminUsers from "./pages/admin/Users";
+
+// Shared Placeholder Pages
 import {
   ProjectsPage,
   TasksPage,
@@ -21,8 +36,16 @@ import {
   PaymentsPage,
   ReviewsPage,
   ProfilePage,
-  SettingsPage
+  SettingsPage,
 } from "./pages/PlaceholderPages";
+
+const RoleDashboardRedirect = () => {
+  const { role } = useAuth();
+  if (role === "client") return <Navigate to="/client" replace />;
+  if (role === "freelancer") return <Navigate to="/freelancer" replace />;
+  if (role === "admin") return <Navigate to="/admin" replace />;
+  return <Navigate to="/login" replace />;
+};
 
 function App() {
   return (
@@ -71,7 +94,88 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Dynamic Role Redirect */}
+          <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+
+          {/* Client Specific Routes */}
+          <Route
+            path="/client"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <ClientDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/create-project"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <CreateProject />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/my-projects"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <MyProject />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Freelancer Specific Routes */}
+          <Route
+            path="/freelancer"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <FreelancerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/browse-projects"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <BrowseProjects />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/project/:id"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <ProjectDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Specific Routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/projects"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminProjects />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Shared Sub-pages */}
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/messages" element={<MessagesPage />} />
