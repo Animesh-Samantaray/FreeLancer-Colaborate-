@@ -30,10 +30,13 @@ router.get("/me", authMiddleware, getMe);
 
 // Google Authentication
 router.get(
-  "/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-  })
+    "/google",
+  (req, res, next) => {
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      state: req.query.role, 
+    })(req, res, next);
+  }
 );
 
 router.get(

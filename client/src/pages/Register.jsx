@@ -15,13 +15,14 @@ function Register() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    password: "",
-    role: "client",
-  });
+const [formData, setFormData] = useState({
+  fullName: "",
+  email: "",
+  phone: "",
+  password: "",
+  role: "",
+  admin_access_token: "",
+});
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -55,6 +56,18 @@ function Register() {
       toast.error("Password must be at least 6 characters long");
       return false;
     }
+    if (!formData.role) {
+  toast.error("Please select a role");
+  return false;
+}
+
+if (
+  formData.role === "admin" &&
+  !formData.admin_access_token.trim()
+) {
+  toast.error("Admin access token is required");
+  return false;
+}
     return true;
   };
 
@@ -80,9 +93,14 @@ function Register() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/google";
-  };
+ const handleGoogleLogin = (role) => {
+  if (!role) {
+    toast.error("Please select a role first.");
+    return;
+  }
+
+  window.location.href = `http://localhost:5000/api/auth/google?role=${role}`;
+};
 
   return (
     <div className="min-h-screen bg-[#09090B] flex items-center justify-center px-4 py-12 relative overflow-hidden bg-gradient-mesh">
@@ -186,21 +204,93 @@ function Register() {
               </div>
             </div>
 
+            {formData.role === "admin" && (
+  <div>
+    <label className="text-xs font-semibold text-gray-300 mb-1.5 block uppercase tracking-wider">
+      Admin Access Token
+    </label>
+
+    <input
+      type="password"
+      name="admin_access_token"
+      placeholder="Enter admin token"
+      value={formData.admin_access_token}
+      onChange={handleChange}
+      className="w-full glass-input rounded-xl py-2.5 px-4 text-sm"
+    />
+  </div>
+)}
+
             {/* Role Dropdown */}
             <div>
-              <label className="text-xs font-semibold text-gray-300 mb-1.5 block uppercase tracking-wider">
-                Register As
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full glass-input rounded-xl py-2.5 px-4 text-sm cursor-pointer"
-              >
-                <option value="client">Client (Hire Freelancers)</option>
-                <option value="freelancer">Freelancer (Find Projects)</option>
-              </select>
-            </div>
+  <label className="text-xs font-semibold text-gray-300 mb-3 block uppercase tracking-wider">
+    Choose Your Role
+  </label>
+
+  <div className="grid grid-cols-3 gap-3">
+
+    <button
+      type="button"
+      onClick={() =>
+        setFormData({ ...formData, role: "client" })
+      }
+      className={`rounded-xl p-4 border transition-all ${
+        formData.role === "client"
+          ? "border-indigo-500 bg-indigo-500/20"
+          : "border-white/10 bg-white/5 hover:bg-white/10"
+      }`}
+    >
+      <div className="text-2xl mb-2">🏢</div>
+      <div className="font-semibold text-white">
+        Client
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        Hire Freelancers
+      </p>
+    </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        setFormData({ ...formData, role: "freelancer" })
+      }
+      className={`rounded-xl p-4 border transition-all ${
+        formData.role === "freelancer"
+          ? "border-indigo-500 bg-indigo-500/20"
+          : "border-white/10 bg-white/5 hover:bg-white/10"
+      }`}
+    >
+      <div className="text-2xl mb-2">👨‍💻</div>
+      <div className="font-semibold text-white">
+        Freelancer
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        Find Projects
+      </p>
+    </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        setFormData({ ...formData, role: "admin" })
+      }
+      className={`rounded-xl p-4 border transition-all ${
+        formData.role === "admin"
+          ? "border-red-500 bg-red-500/20"
+          : "border-white/10 bg-white/5 hover:bg-white/10"
+      }`}
+    >
+      <div className="text-2xl mb-2">🛡️</div>
+      <div className="font-semibold text-white">
+        Admin
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        Manage Platform
+      </p>
+    </button>
+
+  </div>
+</div>
 
             {/* Register Button */}
             <button
@@ -232,18 +322,23 @@ function Register() {
           </div>
 
           {/* Google Register */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full glass-input rounded-xl py-2.5 flex justify-center items-center gap-3 hover:bg-white/5 hover:border-gray-500 transition-all duration-300 cursor-pointer font-medium text-sm text-gray-200"
-          >
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              className="w-5 h-5"
-            />
-            Continue with Google
-          </button>
+         {formData.role !== "admin" && (
+  <button
+    type="button"
+    onClick={() =>
+      handleGoogleLogin(formData.role)
+    }
+    className="w-full glass-input rounded-xl py-2.5 flex justify-center items-center gap-3 hover:bg-white/5 transition-all"
+  >
+    <img
+      src="https://www.svgrepo.com/show/475656/google-color.svg"
+      alt="Google"
+      className="w-5 h-5"
+    />
+
+    Continue with Google
+  </button>
+)}
 
           {/* Login Link */}
           <p className="text-center mt-6 text-gray-400 text-sm">

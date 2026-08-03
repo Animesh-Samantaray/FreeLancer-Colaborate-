@@ -49,7 +49,11 @@ const userSchema = new mongoose.Schema(
       enum: ["local", "google"],
       default: "local",
     },
-
+    status: {
+  type: String,
+  enum: ["active", "suspended"],
+  default: "active",
+},
     // User Role
     role: {
       type: String,

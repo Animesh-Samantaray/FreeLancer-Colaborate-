@@ -17,9 +17,18 @@ export const register = async (req, res) => {
       password,
       role,
       avatar,
+      admin_access_token
     } = req.body;
 
-    
+    const validRoles = ["client", "freelancer", "admin"];
+
+if (!validRoles.includes(role)) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid role.",
+  });
+}
+
     if (!fullName || !email || !password || !role) {
       return res.status(400).json({
         success: false,
@@ -43,8 +52,16 @@ export const register = async (req, res) => {
       });
     }
 
-  
+      if (role === "admin") {
+  if (!admin_access_token || admin_access_token != process.env.ADMIN_ACCESS_TOKEN) {
+    return res.status(403).json({
+      success: false,
+      message: "Invalid admin access token.",
+    });
+  }
+}
     const hashedPassword = await hashPassword(password);
+
 
     const user = await User.create({
       fullName,
