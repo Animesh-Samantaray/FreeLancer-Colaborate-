@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { FiClipboard, FiDollarSign, FiTag, FiEye, FiShield } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
@@ -8,16 +9,51 @@ const categories = ["UI/UX Design", "Web Development", "Mobile App", "Marketing"
 const visibilityOptions = ["Public", "Private"];
 
 function CreateProject() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const projectId = searchParams.get("edit");
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: categories[0],
     requiredSkills: "",
     budget: "",
+    role: "client",
     deadline: "",
     visibility: visibilityOptions[0],
   });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (projectId) {
+      const fetchProject = async () => {
+        try {
+          setLoading(true);
+          const response = await api.get(`/project/${projectId}`);
+          if (response.data.success) {
+            const project = response.data.project;
+            setFormData({
+              title: project.title || "",
+              description: project.description || "",
+              category: project.category || categories[0],
+              requiredSkills: project.requiredSkills ? project.requiredSkills.join(", ") : "",
+              budget: project.budget || "",
+              deadline: project.deadline ? new Date(project.deadline).toISOString().split("T")[0] : "",
+              visibility: project.visibility || visibilityOptions[0],
+              role: "client",
+            });
+          }
+        } catch (err) {
+          toast.error("Failed to load project details.");
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProject();
+    }
+  }, [projectId]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -42,21 +78,33 @@ function CreateProject() {
         ...formData,
         requiredSkills: formData.requiredSkills.split(",").map((skill) => skill.trim()).filter(Boolean),
       };
-      const response = await api.post("/project", payload);
+
+      let response;
+      if (projectId) {
+        response = await api.put(`/project/${projectId}`, payload);
+      } else {
+        response = await api.post("/project", payload);
+      }
+
       if (response.data.success) {
-        toast.success("Project created successfully.");
-        setFormData({
-          title: "",
-          description: "",
-          category: categories[0],
-          requiredSkills: "",
-          budget: "",
-          deadline: "",
-          visibility: visibilityOptions[0],
-        });
+        toast.success(projectId ? "Project updated successfully." : "Project created successfully.");
+        if (projectId) {
+          navigate("/client/my-projects");
+        } else {
+          setFormData({
+            title: "",
+            description: "",
+            category: categories[0],
+            requiredSkills: "",
+            budget: "",
+            deadline: "",
+            visibility: visibilityOptions[0],
+          });
+        }
       }
     } catch (error) {
       console.error(error);
+      toast.error(error?.response?.data?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -66,10 +114,10 @@ function CreateProject() {
     <div className="glass-card border border-white/10 rounded-3xl p-8 shadow-2xl shadow-[#09090B]/40">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#6366F1]">New Project</p>
-          <h1 className="mt-3 text-3xl font-bold text-white">Create a premium project brief</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#6366F1]">{projectId ? "Edit Project" : "New Project"}</p>
+          <h1 className="mt-3 text-3xl font-bold text-white">{projectId ? "Update your project brief" : "Create a premium project brief"}</h1>
           <p className="mt-2 text-sm text-gray-400 max-w-2xl">
-            Fill in the project details and publish to start receiving proposals from qualified freelancers.
+            {projectId ? "Modify your project's description, skills, budget or other terms below." : "Fill in the project details and publish to start receiving proposals from qualified freelancers."}
           </p>
         </div>
         <div className="rounded-3xl bg-white/5 px-4 py-3 text-sm text-gray-300">
@@ -195,14 +243,14 @@ function CreateProject() {
             disabled={loading}
             className="inline-flex items-center justify-center rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366F1]/20 transition hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
           >
-            {loading ? "Publishing Project..." : "Publish Project"}
+            {loading ? (projectId ? "Saving Changes..." : "Publishing Project...") : (projectId ? "Save Changes" : "Publish Project")}
           </button>
         </div>
       </form>
 
       {loading && (
         <div className="mt-6">
-          <LoadingSpinner label="Submitting project..." />
+          <LoadingSpinner label={projectId ? "Saving changes..." : "Submitting project..."} />
         </div>
       )}
     </div>

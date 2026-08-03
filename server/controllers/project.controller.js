@@ -1,4 +1,5 @@
 import Project from "../models/Project.model.js";
+import User from "../models/User.model.js";
 
 export const createProject = async (req, res) => {
   try {
@@ -191,11 +192,19 @@ export const deleteProject = async (req, res) => {
   try {
     const projectId = req.params.id;
     const userId = req.user.id;
-
+    if (req.user.role === "admin") {
+      await Project.findByIdAndDelete(projectId);
+      return res.status(200).json({
+        success: true,
+        message: "Project deleted successfully.",
+      });
+    }
     const project = await Project.findOneAndDelete({
       _id: projectId,
       client: userId,
     });
+    
+    
 
     if (!project) {
       return res.status(404).json({

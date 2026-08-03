@@ -90,7 +90,7 @@ const MyProject = () => {
                   <span>{project.visibility || "Public"}</span>
                 </div>
                 <Link
-                  to="/client/create-project"
+                  to={`/client/create-project?edit=${project._id}`}
                   className="text-sm font-semibold text-[#6366F1] hover:text-[#3B82F6] transition flex items-center gap-2"
                 >
                   <span>Manage</span>

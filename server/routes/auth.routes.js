@@ -56,11 +56,15 @@ router.get(
       }
 
      
+      const role = req.query.state;
+      if (role && ["client", "freelancer", "admin"].includes(role)) {
+        req.user.role = role;
+      }
       req.user.authProvider = "google";
       req.user.isVerified = true;
       await req.user.save();
 
-      const token = generateToken(req.user._id);
+      const token = generateToken(req.user._id, req.user.role);
 
       res.cookie("token", token, {
         httpOnly: true,

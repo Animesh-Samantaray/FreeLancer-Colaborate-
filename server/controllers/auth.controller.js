@@ -133,7 +133,7 @@ export const login = async (req, res) => {
     }
 
     
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.role);
 
    
     user.password = undefined;
