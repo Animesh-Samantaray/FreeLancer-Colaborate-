@@ -36,7 +36,7 @@ const clientProfileSchema = new mongoose.Schema(
 
     companyLogo: {
       type: String,
-      default: "",
+      default: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTRN4lHm8tjxvp85npV2YpZzBw8moqQPMzsuJZI0Gj9w&s=10",
     },
 
     totalProjects: {
