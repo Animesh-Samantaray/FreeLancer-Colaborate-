@@ -2,6 +2,8 @@ import "dotenv/config";
 import passport from "passport";
 import GoogleStrategy from "passport-google-oauth20";
 import User from "../models/User.model.js";
+import ClientProfile from "../models/ClientProfile.model.js";
+import FreelancerProfile from "../models/FreelancerProfile.model.js";
 
 passport.use(
   new GoogleStrategy(
@@ -9,33 +11,34 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
         const googleId = profile.id;
         const name = profile.displayName;
         const email = profile.emails?.[0]?.value;
         const avatar = profile.photos?.[0]?.value;
 
-        
+        // Check if user already exists by googleId
         let user = await User.findOne({ googleId }).select("-password");
 
         if (user) {
           return done(null, user);
         }
 
-       
+        // Check if user already exists by email
         if (email) {
           user = await User.findOne({ email }).select("-password");
 
           if (user) {
-           
+            // Link Google account to existing user
             user.googleId = googleId;
-
-            if (avatar) {
+            if (avatar && !user.avatar) {
               user.avatar = avatar;
             }
-            user.isVerified=true;
+            user.isVerified = true;
+            user.authProvider = "google";
 
             await user.save();
 
@@ -43,14 +46,39 @@ passport.use(
           }
         }
 
+        
+        let role = req.query.state;
+
+        
+        if (role === "admin") {
+          return done(new Error("Admin registration is not allowed via Google OAuth"), null);
+        }
+
+        if (!role || !["client", "freelancer"].includes(role)) {
+          role = "freelancer";
+        }
+
        
         user = await User.create({
           googleId,
-          fullName:name,
+          fullName: name,
           email,
           avatar,
-          authProvider:"google"
+          role,
+          authProvider: "google",
+          isVerified: true,
         });
+
+        
+        if (role === "client") {
+          await ClientProfile.create({
+            user: user._id,
+          });
+        } else if (role === "freelancer") {
+          await FreelancerProfile.create({
+            user: user._id,
+          });
+        }
 
         return done(null, user);
       } catch (error) {
@@ -60,12 +88,12 @@ passport.use(
   )
 );
 
-// Serialize user
+
 passport.serializeUser((user, done) => {
   done(null, user._id);
 });
 
-// Deserialize user
+
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id).select("-password");

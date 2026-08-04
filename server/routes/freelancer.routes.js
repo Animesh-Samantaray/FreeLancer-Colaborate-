@@ -11,10 +11,6 @@ import {
 
 const router = express.Router();
 
-// Public (authenticated users)
-router.get("/", authMiddleware, getAllFreelancers);
-router.get("/:id", authMiddleware, getFreelancerById);
-
 // Logged-in freelancer
 router.get(
   "/profile",
@@ -29,5 +25,9 @@ router.put(
   authorizeRoles("freelancer","admin"),
   updateFreelancerProfile
 );
+
+// Public (authenticated users)
+router.get("/", authMiddleware, getAllFreelancers);
+router.get("/:id", authMiddleware, getFreelancerById);
 
 export default router;

@@ -1,19 +1,22 @@
 import ClientProfile from "../models/ClientProfile.model.js";
+import User from "../models/User.model.js";
 
 export const getClientProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const profile = await ClientProfile.findOne({ user: userId }).populate(
+    let profile = await ClientProfile.findOne({ user: userId }).populate(
       "user",
       "fullName email avatar role"
     );
 
     if (!profile) {
-      return res.status(404).json({
-        success: false,
-        message: "Client profile not found.",
-      });
+      // Create a default profile on demand if one doesn't exist
+      await ClientProfile.create({ user: userId });
+      profile = await ClientProfile.findOne({ user: userId }).populate(
+        "user",
+        "fullName email avatar role"
+      );
     }
 
     return res.status(200).json({
@@ -34,16 +37,6 @@ export const getClientProfile = async (req, res) => {
 export const updateClientProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-
-    const profile = await ClientProfile.findOne({ user: userId });
-
-    if (!profile) {
-      return res.status(404).json({
-        success: false,
-        message: "Client profile not found.",
-      });
-    }
-
     const {
       companyName,
       companyDescription,
@@ -53,25 +46,19 @@ export const updateClientProfile = async (req, res) => {
       companyLogo,
     } = req.body;
 
-    if (companyName !== undefined)
-      profile.companyName = companyName;
+    const updateData = {};
+    if (companyName !== undefined) updateData.companyName = companyName;
+    if (companyDescription !== undefined) updateData.companyDescription = companyDescription;
+    if (industry !== undefined) updateData.industry = industry;
+    if (website !== undefined) updateData.website = website;
+    if (location !== undefined) updateData.location = location;
+    if (companyLogo !== undefined) updateData.companyLogo = companyLogo;
 
-    if (companyDescription !== undefined)
-      profile.companyDescription = companyDescription;
-
-    if (industry !== undefined)
-      profile.industry = industry;
-
-    if (website !== undefined)
-      profile.website = website;
-
-    if (location !== undefined)
-      profile.location = location;
-
-    if (companyLogo !== undefined)
-      profile.companyLogo = companyLogo;
-
-    await profile.save();
+    const profile = await ClientProfile.findOneAndUpdate(
+      { user: userId },
+      { $set: updateData },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).populate("user", "fullName email avatar role");
 
     return res.status(200).json({
       success: true,
@@ -90,6 +77,26 @@ export const updateClientProfile = async (req, res) => {
 
 export const getAllClients = async (req, res) => {
   try {
+    // Find all users with role 'client'
+    const clientUsers = await User.find({ role: "client" });
+
+    // Find all existing client profiles
+    const existingProfiles = await ClientProfile.find();
+    const existingUserIds = new Set(
+      existingProfiles
+        .filter(p => p && p.user)
+        .map(p => p.user.toString())
+    );
+
+    // Find users who don't have profiles
+    const missingProfiles = clientUsers.filter(u => !existingUserIds.has(u._id.toString()));
+
+    if (missingProfiles.length > 0) {
+      // Create missing profiles in bulk
+      const newProfiles = missingProfiles.map(u => ({ user: u._id }));
+      await ClientProfile.insertMany(newProfiles);
+    }
+
     const clients = await ClientProfile.find()
       .populate("user", "fullName email avatar role")
       .sort({ createdAt: -1 });
