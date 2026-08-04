@@ -6,6 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import projectRoutes from './routes/project.route.js';
 import authRoutes from "./routes/auth.routes.js";
+import clientRoutes from "./routes/client.routes.js";
 
 
 import aiRoutes from './routes/ai.route.js';
@@ -43,7 +44,7 @@ mongoose
 
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
-
+app.use("/api/client", clientRoutes);
 
 
 app.use("/api/ai" ,  aiRoutes);
