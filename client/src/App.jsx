@@ -15,11 +15,15 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 
 // Client Pages
 import ClientDashboard from "./pages/client/Dashboard";
+import ClientProfile from "./pages/client/ClientProfile";
+import ClientDirectory from "./pages/client/ClientDirectory";
 import CreateProject from "./pages/client/CreateProject";
 import MyProject from "./pages/client/MyProject";
 
 // Freelancer Pages
 import FreelancerDashboard from "./pages/freelancer/Dashboard";
+import FreelancerProfile from "./pages/freelancer/FreelancerProfile";
+import FreelancerDirectory from "./pages/freelancer/FreelancerDirectory";
 import BrowseProjects from "./pages/freelancer/BrowseProjects";
 import ProjectDetails from "./pages/freelancer/ProjectDetails";
 
@@ -107,6 +111,22 @@ function App() {
             }
           />
           <Route
+            path="/client/profile"
+            element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <ClientProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/freelancers"
+            element={
+              <ProtectedRoute allowedRoles={["client", "admin"]}>
+                <FreelancerDirectory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/client/create-project"
             element={
               <ProtectedRoute allowedRoles={["client"]}>
@@ -129,6 +149,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["freelancer"]}>
                 <FreelancerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/profile"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <FreelancerProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/clients"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer", "admin"]}>
+                <ClientDirectory />
               </ProtectedRoute>
             }
           />
