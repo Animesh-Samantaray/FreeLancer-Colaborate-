@@ -1,131 +1,219 @@
-import { useMemo } from "react";
-import { FiBriefcase, FiTrendingUp, FiDollarSign, FiStar, FiSearch, FiCheckCircle, FiMessageSquare } from "react-icons/fi";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import {
+  FiCheckCircle,
+  FiClock,
+  FiDollarSign,
+  FiActivity,
+  FiSearch,
+  FiUser,
+  FiFolder,
+  FiArrowRight,
+  FiBriefcase,
+} from "react-icons/fi";
+import api from "../../api/axios";
+import StatsCard from "../../components/StatsCard";
+import GlassCard from "../../components/GlassCard";
+import Button from "../../components/Button";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
-const FreelancerDashboard = () => {
-  const { user } = useAuth();
+function Dashboard() {
+  const [profile, setProfile] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const stats = useMemo(
-    () => [
-      { label: "Active Bids", value: "14", icon: FiBriefcase, accent: "from-[#6366F1] to-[#3B82F6]" },
-      { label: "Avg. Response Time", value: "2.4h", icon: FiTrendingUp, accent: "from-[#22C55E] to-[#10B981]" },
-      { label: "Total Earnings", value: "$24,750", icon: FiDollarSign, accent: "from-[#F59E0B] to-[#F97316]" },
-      { label: "Client Rating", value: "4.9", icon: FiStar, accent: "from-[#8B5CF6] to-[#6366F1]" },
-    ],
-    []
-  );
+  useEffect(() => {
+    const fetchFreelancerDashboard = async () => {
+      try {
+        setLoading(true);
+        const [profileRes, projectsRes] = await Promise.allSettled([
+          api.get("/freelancer/profile"),
+          api.get("/project"),
+        ]);
+
+        if (profileRes.status === "fulfilled" && profileRes.value.data?.freelancer) {
+          setProfile(profileRes.value.data.freelancer);
+        }
+
+        if (projectsRes.status === "fulfilled" && projectsRes.value.data?.projects) {
+          setProjects(projectsRes.value.data.projects);
+        }
+      } catch (err) {
+        console.error("Freelancer dashboard error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFreelancerDashboard();
+  }, []);
+
+  if (loading) {
+    return <SkeletonLoader type="profile" />;
+  }
+
+  const completedProjects = profile?.completedProjects ?? 0;
+  const ongoingProjects = profile?.ongoingProjects ?? 0;
+  const hoursWorked = profile?.totalHoursWorked ?? 0;
+  const totalEarnings = profile?.totalEarnings ?? 0;
 
   return (
-    <div className="space-y-8">
-      <div className="glass-card border border-white/10 rounded-3xl p-8 overflow-hidden">
-        <div className="absolute -right-16 top-0 h-56 w-56 rounded-full bg-[#6366F1]/10 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Top Banner */}
+      <div className="glass-card border border-white/10 p-8 rounded-3xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-bl from-[#3B82F6]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-[#6366F1]">Freelancer Dashboard</p>
-            <h1 className="mt-3 text-3xl font-bold text-white">Welcome back, {user?.fullName?.split(" ")[0] || "Partner"}</h1>
-            <p className="mt-2 text-sm text-gray-400 max-w-2xl">
-              Track proposals, monitor active engagements, and discover premium clients from your dashboard.
+            <span className="text-xs uppercase tracking-[0.3em] font-semibold text-[#3B82F6]">
+              Freelancer Workspace
+            </span>
+            <h1 className="mt-2 text-3xl font-extrabold text-white font-display">
+              Welcome back, {profile?.user?.fullName || "Freelancer"}
+            </h1>
+            <p className="mt-2 text-sm text-gray-400 max-w-xl">
+              {profile?.professionalTitle || "Professional Freelancer"} · Keep track of active jobs, earnings, and client proposals.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link
-              to="/freelancer/browse-projects"
-              className="inline-flex items-center justify-center rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366F1]/20 hover:brightness-110 transition"
-            >
-              Browse Projects
+          <div className="flex items-center gap-3">
+            <Link to="/freelancer/browse-projects">
+              <Button icon={<FiSearch />}>Browse Projects</Button>
             </Link>
-            <button className="inline-flex items-center justify-center rounded-3xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-              Invite Client
-            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-        {stats.map((item) => (
-          <div key={item.label} className="glass-card rounded-3xl border border-white/10 p-6">
-            <div className="flex items-center justify-between gap-4">
+      {/* Top Statistic Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatsCard
+          title="Completed Projects"
+          value={completedProjects}
+          subtitle="Delivered to clients"
+          icon={<FiCheckCircle className="w-5 h-5" />}
+          accent="from-emerald-500 to-teal-600"
+        />
+        <StatsCard
+          title="Ongoing Projects"
+          value={ongoingProjects}
+          subtitle="Currently active work"
+          icon={<FiActivity className="w-5 h-5" />}
+          accent="from-[#6366F1] to-[#3B82F6]"
+        />
+        <StatsCard
+          title="Hours Worked"
+          value={`${hoursWorked} hrs`}
+          subtitle="Total logged billable time"
+          icon={<FiClock className="w-5 h-5" />}
+          accent="from-[#3B82F6] to-[#8B5CF6]"
+        />
+        <StatsCard
+          title="Total Earnings"
+          value={`$${totalEarnings.toLocaleString()}`}
+          subtitle="Gross earnings recorded"
+          icon={<FiDollarSign className="w-5 h-5" />}
+          accent="from-purple-500 to-indigo-600"
+        />
+      </div>
+
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Side: Recommended Projects (2 cols) */}
+        <div className="lg:col-span-2 space-y-6">
+          <GlassCard hover={false} className="p-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">{item.label}</p>
-                <h2 className="mt-4 text-3xl font-bold text-white">{item.value}</h2>
+                <h2 className="text-lg font-bold text-white font-display">Available Projects</h2>
+                <p className="text-xs text-gray-400">Recommended jobs open for proposals</p>
               </div>
-              <div className={`rounded-3xl bg-gradient-to-br ${item.accent} p-4 text-white`}>
-                <item.icon className="w-5 h-5" />
+              <Link
+                to="/freelancer/browse-projects"
+                className="text-xs font-semibold text-[#3B82F6] hover:text-[#6366F1] transition flex items-center gap-1"
+              >
+                <span>Explore All</span>
+                <FiArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {projects.length > 0 ? (
+                projects.slice(0, 4).map((project) => (
+                  <div
+                    key={project._id}
+                    className="p-5 rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 transition space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <h3 className="text-base font-semibold text-white">{project.title}</h3>
+                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        ${project.budget}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed">
+                      {project.description}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 text-xs text-gray-400">
+                      <span>Category: {project.category || "General"}</span>
+                      <Link
+                        to={`/freelancer/project/${project._id}`}
+                        className="text-[#3B82F6] hover:underline font-semibold flex items-center gap-1"
+                      >
+                        <span>View Project</span>
+                        <FiArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <FiFolder className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                  <p className="text-sm font-semibold text-gray-300">No open projects right now.</p>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Right Side: Recent Activity Timeline */}
+        <div className="space-y-6">
+          <GlassCard hover={false} className="p-6">
+            <h2 className="text-lg font-bold text-white font-display mb-2">Recent Activity</h2>
+            <p className="text-xs text-gray-400 mb-6">Latest milestones and updates</p>
+
+            <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/10">
+              <div className="relative">
+                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#6366F1] ring-4 ring-[#09090B]" />
+                <p className="text-xs font-semibold text-white">Profile Synchronized</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Your freelancer profile is live.</p>
+                <span className="text-[10px] text-gray-500">Just now</span>
+              </div>
+
+              <div className="relative">
+                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#3B82F6] ring-4 ring-[#09090B]" />
+                <p className="text-xs font-semibold text-white">Browse Client Marketplace</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">New client requirements posted today.</p>
+                <span className="text-[10px] text-gray-500">2 hours ago</span>
+              </div>
+
+              <div className="relative">
+                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-[#09090B]" />
+                <p className="text-xs font-semibold text-white">System Update</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Platform performance updated.</p>
+                <span className="text-[10px] text-gray-500">1 day ago</span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="glass-card rounded-3xl border border-white/10 p-6">
-          <h2 className="text-lg font-bold text-white">Suggested Roles</h2>
-          <p className="mt-2 text-sm text-gray-400">Projects tailored for your skills and preferred budget range.</p>
-          <div className="mt-6 space-y-4">
-            {[
-              { title: "Product Design Sprint", budget: "$4,200", status: "Open" },
-              { title: "Full-stack React App", budget: "$8,900", status: "Hiring" },
-              { title: "AI Chatbot Prototype", budget: "$6,300", status: "Open" },
-            ].map((item) => (
-              <div key={item.title} className="rounded-3xl bg-white/5 p-4 border border-white/5 hover:border-white/10 transition">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">{item.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">{item.budget}</p>
-                  </div>
-                  <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-gray-300">
-                    {item.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="glass-card rounded-3xl border border-white/10 p-6 xl:col-span-2">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-white">Latest Activity</h2>
-              <p className="mt-2 text-sm text-gray-400">Recent responses and follow-up reminders for active clients.</p>
+            <div className="pt-6 mt-6 border-t border-white/10 space-y-3">
+              <Link to="/freelancer/profile" className="block">
+                <Button variant="secondary" className="w-full" icon={<FiUser />}>
+                  View Public Profile
+                </Button>
+              </Link>
             </div>
-            <span className="text-xs uppercase tracking-[0.3em] text-gray-400">Live</span>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            {[
-              { title: "Messaging with Lexi Studio", note: "Client asked for a revision on UI interactions.", time: "2m ago" },
-              { title: "Proposal accepted for Design System", note: "Awaiting contract approval.", time: "1h ago" },
-              { title: "New invite from FinTech team", note: "Budget confirmed at $5,400.", time: "Today" },
-            ].map((item) => (
-              <div key={item.title} className="rounded-3xl bg-white/5 p-4 border border-white/5 hover:border-white/10 transition">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">{item.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">{item.note}</p>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400">{item.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          </GlassCard>
         </div>
-      </div>
-
-      <div className="glass-card rounded-3xl border border-white/10 p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-white">Start your next proposal</h2>
-          <p className="mt-2 text-sm text-gray-400">Browse the latest client requests and send the work plan in minutes.</p>
-        </div>
-        <Link
-          to="/freelancer/browse-projects"
-          className="inline-flex items-center justify-center rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366F1]/20 hover:brightness-110 transition"
-        >
-          Browse all opportunities
-        </Link>
       </div>
     </div>
   );
-};
+}
 
-export default FreelancerDashboard;
+export default Dashboard;

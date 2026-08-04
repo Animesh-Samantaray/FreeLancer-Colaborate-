@@ -1,133 +1,265 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiPlus, FiArrowRight, FiFolder, FiCheckCircle, FiDollarSign, FiTrendingUp } from "react-icons/fi";
+import {
+  FiFolder,
+  FiActivity,
+  FiCheckCircle,
+  FiDollarSign,
+  FiPlus,
+  FiUsers,
+  FiUser,
+  FiArrowRight,
+  FiEye,
+} from "react-icons/fi";
 import api from "../../api/axios";
-import LoadingSpinner from "../../components/LoadingSpinner";
-import EmptyState from "../../components/EmptyState";
+import StatsCard from "../../components/StatsCard";
+import GlassCard from "../../components/GlassCard";
+import Button from "../../components/Button";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 function Dashboard() {
+  const [profile, setProfile] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/project");
-        setProjects(response.data.projects || []);
+        const [profileRes, projectsRes] = await Promise.allSettled([
+          api.get("/client/profile"),
+          api.get("/project"),
+        ]);
+
+        if (profileRes.status === "fulfilled" && profileRes.value.data?.profile) {
+          setProfile(profileRes.value.data.profile);
+        }
+
+        if (projectsRes.status === "fulfilled" && projectsRes.value.data?.projects) {
+          setProjects(projectsRes.value.data.projects);
+        }
       } catch (err) {
-        setError(err?.response?.data?.message || "Unable to load projects.");
+        console.error("Dashboard error:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProjects();
+    fetchDashboardData();
   }, []);
 
-  const stats = useMemo(() => {
-    const total = projects.length;
-    const open = projects.filter((project) => project.status === "Open" || project.status === "Hiring" || project.status === "In Progress").length;
-    const completed = projects.filter((project) => project.status === "Completed").length;
-    const budget = projects.reduce((sum, project) => sum + Number(project.budget || 0), 0);
-
-    return [
-      { title: "Total Projects", value: `${total}`, subtitle: "Projects you have posted.", icon: <FiFolder /> },
-      { title: "Open Projects", value: `${open}`, subtitle: "Active and hiring work.", icon: <FiTrendingUp /> },
-      { title: "Completed", value: `${completed}`, subtitle: "Successfully delivered.", icon: <FiCheckCircle /> },
-      { title: "Budget Spent", value: `$${budget.toLocaleString()}`, subtitle: "Total project budget.", icon: <FiDollarSign /> },
-    ];
-  }, [projects]);
-
   if (loading) {
-    return <LoadingSpinner label="Gathering your projects..." />;
+    return <SkeletonLoader type="profile" />;
   }
 
-  if (error) {
-    return <EmptyState title="Unable to load dashboard" description={error} />;
-  }
+  // Calculate statistics from profile or projects fallback
+  const totalProjects = profile?.totalProjects ?? projects.length;
+  const activeProjects =
+    profile?.activeProjects ??
+    projects.filter(
+      (p) => p.status === "Open" || p.status === "In Progress" || p.status === "Hiring"
+    ).length;
+  const completedProjects =
+    profile?.completedProjects ?? projects.filter((p) => p.status === "Completed").length;
+  const totalSpent =
+    profile?.totalSpent ??
+    projects.reduce((acc, curr) => acc + Number(curr.budget || 0), 0);
 
   return (
-    <div className="space-y-8">
-      <div className="glass-card border border-white/10 p-8 rounded-3xl">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Welcome Banner */}
+      <div className="glass-card border border-white/10 p-8 rounded-3xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-bl from-[#6366F1]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-[#6366F1]">Client Dashboard</p>
-            <h1 className="mt-3 text-3xl font-bold text-white">Your active projects and budget overview</h1>
-            <p className="mt-3 text-sm text-gray-400 max-w-2xl">
-              Manage posted work, monitor milestone progress, and keep communication running smoothly from one modern client dashboard.
+            <span className="text-xs uppercase tracking-[0.3em] font-semibold text-[#6366F1]">
+              Client Overview
+            </span>
+            <h1 className="mt-2 text-3xl font-extrabold text-white font-display">
+              Welcome back, {profile?.companyName || "Client"}
+            </h1>
+            <p className="mt-2 text-sm text-gray-400 max-w-xl">
+              Track project milestones, monitor budget spending, and collaborate with top-tier talent from your workspace.
             </p>
           </div>
-          <Link
-            to="/client/create-project"
-            className="inline-flex items-center gap-2 rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366F1]/20 transition hover:brightness-110"
-          >
-            <FiPlus className="w-4 h-4" />
-            Create Project
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/client/create-project">
+              <Button icon={<FiPlus />}>Create Project</Button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.title} className="glass-card border border-white/10 rounded-3xl p-6">
-            <div className="flex items-center justify-between gap-4">
+      {/* Top Statistic Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatsCard
+          title="Total Projects"
+          value={totalProjects}
+          subtitle="All projects created"
+          icon={<FiFolder className="w-5 h-5" />}
+          accent="from-[#6366F1] to-[#3B82F6]"
+        />
+        <StatsCard
+          title="Active Projects"
+          value={activeProjects}
+          subtitle="Currently open or in progress"
+          icon={<FiActivity className="w-5 h-5" />}
+          accent="from-[#3B82F6] to-[#8B5CF6]"
+        />
+        <StatsCard
+          title="Completed Projects"
+          value={completedProjects}
+          subtitle="Successfully finalized"
+          icon={<FiCheckCircle className="w-5 h-5" />}
+          accent="from-emerald-500 to-teal-600"
+        />
+        <StatsCard
+          title="Total Spent"
+          value={`$${totalSpent.toLocaleString()}`}
+          subtitle="Total budget allocated"
+          icon={<FiDollarSign className="w-5 h-5" />}
+          accent="from-purple-500 to-indigo-600"
+        />
+      </div>
+
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Side: Recent Projects Table (2 cols) */}
+        <div className="lg:col-span-2 space-y-6">
+          <GlassCard hover={false} className="p-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">{stat.title}</p>
-                <h3 className="mt-4 text-3xl font-bold text-white">{stat.value}</h3>
+                <h2 className="text-lg font-bold text-white font-display">Recent Projects</h2>
+                <p className="text-xs text-gray-400">Overview of your recent active postings</p>
               </div>
-              <div className="rounded-3xl bg-[#6366F1]/10 p-4 text-[#6366F1]">{stat.icon}</div>
+              <Link
+                to="/client/my-projects"
+                className="text-xs font-semibold text-[#6366F1] hover:text-[#3B82F6] transition flex items-center gap-1"
+              >
+                <span>View All</span>
+                <FiArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-            <p className="mt-4 text-sm text-gray-400">{stat.subtitle}</p>
-          </div>
-        ))}
-      </div>
 
-      <div className="glass-card border border-white/10 rounded-3xl p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white">Recent projects</h2>
-            <p className="text-sm text-gray-400">Quick overview of your most recently posted jobs.</p>
-          </div>
-          <Link className="text-sm font-semibold text-[#6366F1] hover:text-[#3B82F6] transition" to="/client/my-projects">
-            View all projects <FiArrowRight />
-          </Link>
+            {projects.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <th className="pb-3 px-2">Project</th>
+                      <th className="pb-3 px-2">Category</th>
+                      <th className="pb-3 px-2">Budget</th>
+                      <th className="pb-3 px-2">Status</th>
+                      <th className="pb-3 px-2 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {projects.slice(0, 5).map((project) => (
+                      <tr key={project._id} className="hover:bg-white/[0.02] transition">
+                        <td className="py-4 px-2 font-medium text-white max-w-[200px] truncate">
+                          {project.title}
+                        </td>
+                        <td className="py-4 px-2 text-gray-400 text-xs">
+                          {project.category || "General"}
+                        </td>
+                        <td className="py-4 px-2 text-white font-semibold">
+                          ${project.budget}
+                        </td>
+                        <td className="py-4 px-2">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+                              project.status === "Completed"
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                : project.status === "In Progress"
+                                ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
+                                : "bg-blue-500/10 border-blue-500/30 text-blue-400"
+                            }`}
+                          >
+                            {project.status || "Open"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-2 text-right">
+                          <Link
+                            to="/client/my-projects"
+                            className="inline-flex items-center gap-1 p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition text-xs font-medium"
+                          >
+                            <FiEye className="w-3.5 h-3.5" />
+                            <span>Details</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-10">
+                <FiFolder className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-300">No projects found</p>
+                <p className="text-xs text-gray-500 mt-1">Start by posting your first project.</p>
+                <Link to="/client/create-project" className="inline-block mt-4">
+                  <Button variant="secondary" icon={<FiPlus />}>
+                    Create Project
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </GlassCard>
         </div>
 
-        <div className="mt-6 space-y-4">
-          {projects.length > 0 ? (
-            projects.slice(0, 4).map((project) => (
-              <div key={project._id} className="rounded-3xl border border-white/10 bg-white/5 p-5 hover:border-white/20 transition">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{project.title}</p>
-                    <p className="text-xs text-gray-400 mt-1">{project.category || "General"} · {new Date(project.deadline).toLocaleDateString()}</p>
+        {/* Right Side: Quick Actions Card */}
+        <div className="space-y-6">
+          <GlassCard hover={false} className="p-6">
+            <h2 className="text-lg font-bold text-white font-display mb-2">Quick Actions</h2>
+            <p className="text-xs text-gray-400 mb-6">Shortcuts to manage your account and team</p>
+
+            <div className="space-y-3">
+              <Link to="/client/create-project" className="block">
+                <div className="group flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-[#6366F1]/40 hover:bg-[#6366F1]/10 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#6366F1]/20 flex items-center justify-center text-[#6366F1]">
+                      <FiPlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Post New Project</p>
+                      <p className="text-xs text-gray-400">Hire freelancers for new work</p>
+                    </div>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] rounded-full border border-white/10 bg-white/5 px-3 py-2 text-gray-300">
-                    {project.status || "Active"}
+                  <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition text-[#6366F1]" />
+                </div>
+              </Link>
+
+              <Link to="/client/freelancers" className="block">
+                <div className="group flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-[#3B82F6]/40 hover:bg-[#3B82F6]/10 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 flex items-center justify-center text-[#3B82F6]">
+                      <FiUsers className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Browse Freelancers</p>
+                      <p className="text-xs text-gray-400">Explore talented professionals</p>
+                    </div>
                   </div>
+                  <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition text-[#3B82F6]" />
                 </div>
-                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-gray-300 line-clamp-2">{project.description}</p>
-                  <span className="rounded-full bg-white/5 px-4 py-2 text-xs text-gray-400">Budget: ${project.budget}</span>
+              </Link>
+
+              <Link to="/client/profile" className="block">
+                <div className="group flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-purple-500/40 hover:bg-purple-500/10 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                      <FiUser className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Company Profile</p>
+                      <p className="text-xs text-gray-400">Update company info & logo</p>
+                    </div>
+                  </div>
+                  <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition text-purple-400" />
                 </div>
-              </div>
-            ))
-          ) : (
-            <EmptyState
-              title="No projects yet"
-              description="You haven't posted a project yet. Start by creating your first project to attract the right freelancer."
-              action={
-                <Link
-                  to="/client/create-project"
-                  className="rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white"
-                >
-                  Create first project
-                </Link>
-              }
-            />
-          )}
+              </Link>
+            </div>
+          </GlassCard>
         </div>
       </div>
     </div>
