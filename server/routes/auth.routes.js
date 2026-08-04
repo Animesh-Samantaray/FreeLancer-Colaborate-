@@ -41,6 +41,7 @@ router.get(
   }
 );
 
+
 router.get(
   "/google/callback",
   passport.authenticate("google", {
@@ -54,15 +55,6 @@ router.get(
           `${process.env.CLIENT_URL || "http://localhost:5173"}/login`
         );
       }
-
-     
-      const role = req.query.state;
-      if (role && ["client", "freelancer", "admin"].includes(role)) {
-        req.user.role = role;
-      }
-      req.user.authProvider = "google";
-      req.user.isVerified = true;
-      await req.user.save();
 
       const token = generateToken(req.user._id, req.user.role);
 

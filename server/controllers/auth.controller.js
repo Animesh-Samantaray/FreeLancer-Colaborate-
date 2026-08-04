@@ -5,7 +5,8 @@ import { comparePassword, hashPassword } from "../helper/hashPassword.js";
 import { sendMail } from "../utils/sendMail.js";
 import otpTemplate from "../utils/otpTemplete.js";
 import resetPasswordTemplate from "../utils/resetPasswordOtpTemplete.js";
-
+import ClientProfile from "../models/ClientProfile.model.js";
+import FreelancerProfile from "../models/FreelancerProfile.model.js";
 
 
 export const register = async (req, res) => {
@@ -73,6 +74,18 @@ if (!validRoles.includes(role)) {
       authProvider: "local",
       
     });
+    
+if (user.role === "client") {
+  await ClientProfile.create({
+    user: user._id,
+  });
+}
+
+if (user.role === "freelancer") {
+  await FreelancerProfile.create({
+    user: user._id,
+  });
+}
 
 
     user.password = undefined;
