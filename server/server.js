@@ -7,13 +7,14 @@ import cookieParser from "cookie-parser";
 import projectRoutes from './routes/project.route.js';
 import authRoutes from "./routes/auth.routes.js";
 import clientRoutes from "./routes/client.routes.js";
+import freelancerRoutes from "./routes/freelancer.routes.js";
+import authMiddleware from "./middlewares/auth.middleware.js";
 
 
 import aiRoutes from './routes/ai.route.js';
 
 import path from "path";
 import { fileURLToPath } from "url";
-import authMiddleware from "./middlewares/auth.middleware.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,6 +46,7 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
 app.use("/api/client", clientRoutes);
+app.use("/api/freelancer", freelancerRoutes);
 
 
 app.use("/api/ai" ,  aiRoutes);
