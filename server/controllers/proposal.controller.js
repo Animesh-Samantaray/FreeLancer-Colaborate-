@@ -66,7 +66,7 @@ export const createProposal = async (req, res) => {
    
     const existingProposal = await Proposal.findOne({
       project: projectId,
-      freelancer: freelancer._id,
+      $or: [{ freelancer: userId }, { freelancer: freelancer._id }],
     });
 
     if (existingProposal) {
@@ -79,7 +79,7 @@ export const createProposal = async (req, res) => {
     const proposal = await Proposal.create({
       project: projectId,
       client: project.client,
-      freelancer: freelancer._id,
+      freelancer: userId,
       coverLetter,
       bidAmount,
       estimatedDays,
@@ -105,9 +105,13 @@ export const getMyProposals = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const proposals = await Proposal.find({
-      freelancer: userId,
-    })
+    const freelancerProfile = await FreelancerProfile.findOne({ user: userId });
+
+    const filter = freelancerProfile
+      ? { $or: [{ freelancer: userId }, { freelancer: freelancerProfile._id }] }
+      : { freelancer: userId };
+
+    const proposals = await Proposal.find(filter)
       .populate("project")
       .populate("client", "fullName email avatar role")
       .sort({ createdAt: -1 });
@@ -243,7 +247,7 @@ export const updateProposal = async (req, res) => {
       }
 
       
-      project.status = "Hiring";
+      project.status = "Hired";
 
       await project.save();
     }
@@ -281,10 +285,12 @@ export const deleteProposal = async (req, res) => {
     }
 
    
-    if (
-      proposal.freelancer.toString() !== userId &&
-      role !== "admin"
-    ) {
+    const freelancerProfile = await FreelancerProfile.findOne({ user: userId });
+    const isOwner =
+      proposal.freelancer.toString() === userId ||
+      (freelancerProfile && proposal.freelancer.toString() === freelancerProfile._id.toString());
+
+    if (!isOwner && role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",

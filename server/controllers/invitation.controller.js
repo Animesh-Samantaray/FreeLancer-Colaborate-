@@ -256,7 +256,7 @@ export const updateInvitation = async (req, res) => {
           project.freelancers.push(userId);
         }
 
-        project.status = "Hiring";
+        project.status = "Hired";
 
         await project.save();
       }

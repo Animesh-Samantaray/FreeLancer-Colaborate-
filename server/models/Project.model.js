@@ -52,6 +52,7 @@ const projectSchema = new mongoose.Schema(
       enum: [
         "Open",
         "Hiring",
+        "Hired",
         "In Progress",
         "Completed",
         "Cancelled",

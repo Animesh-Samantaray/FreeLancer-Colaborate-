@@ -26,6 +26,8 @@ import FreelancerProfile from "./pages/freelancer/FreelancerProfile";
 import FreelancerDirectory from "./pages/freelancer/FreelancerDirectory";
 import BrowseProjects from "./pages/freelancer/BrowseProjects";
 import ProjectDetails from "./pages/freelancer/ProjectDetails";
+import MyProposals from "./pages/freelancer/MyProposals";
+import MyInvitations from "./pages/freelancer/MyInvitations";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -181,6 +183,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["freelancer"]}>
                 <ProjectDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/my-proposals"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <MyProposals />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/my-invitations"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <MyInvitations />
               </ProtectedRoute>
             }
           />
