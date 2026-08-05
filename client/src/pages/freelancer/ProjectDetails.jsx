@@ -1,16 +1,33 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { FiClock, FiDollarSign, FiArrowLeft, FiCheckCircle, FiUser, FiSend } from "react-icons/fi";
+import {
+  FiClock,
+  FiDollarSign,
+  FiArrowLeft,
+  FiCheckCircle,
+  FiUser,
+  FiSend,
+  FiLock,
+} from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
+import { createProposalApi } from "../../api/apiServices";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
+import Modal from "../../components/Modal";
+import Button from "../../components/Button";
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Proposal modal state
+  const [proposalModalOpen, setProposalModalOpen] = useState(false);
+  const [coverLetter, setCoverLetter] = useState("");
+  const [bidAmount, setBidAmount] = useState("");
+  const [estimatedDays, setEstimatedDays] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -18,7 +35,12 @@ const ProjectDetails = () => {
       try {
         setLoading(true);
         const response = await api.get(`/project/${id}`);
-        setProject(response.data.project);
+        const proj = response.data.project;
+        setProject(proj);
+        if (proj) {
+          setBidAmount(proj.budget || "");
+          setEstimatedDays("7");
+        }
       } catch (err) {
         setError(err?.response?.data?.message || "Failed to load project details.");
       } finally {
@@ -29,12 +51,37 @@ const ProjectDetails = () => {
     if (id) fetchProjectDetails();
   }, [id]);
 
-  const handleSubmitProposal = () => {
-    setSubmitting(true);
-    setTimeout(() => {
-      toast.success("Proposal submitted successfully to the client!");
+  const handleSubmitProposal = async (e) => {
+    e.preventDefault();
+    if (!coverLetter.trim()) {
+      toast.error("Please enter a cover letter.");
+      return;
+    }
+    if (!bidAmount || Number(bidAmount) <= 0) {
+      toast.error("Please enter a valid bid amount.");
+      return;
+    }
+    if (!estimatedDays || Number(estimatedDays) <= 0) {
+      toast.error("Please enter estimated completion days.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await createProposalApi({
+        project: id,
+        coverLetter: coverLetter.trim(),
+        bidAmount: Number(bidAmount),
+        estimatedDays: Number(estimatedDays),
+      });
+      toast.success(res.message || "Proposal submitted successfully!");
+      setProposalModalOpen(false);
+      setCoverLetter("");
+    } catch (err) {
+      console.error("Proposal submission error:", err);
+    } finally {
       setSubmitting(false);
-    }, 1000);
+    }
   };
 
   if (loading) {
@@ -57,6 +104,8 @@ const ProjectDetails = () => {
       />
     );
   }
+
+  const isPrivate = project.visibility === "Private";
 
   return (
     <div className="space-y-8">
@@ -81,14 +130,20 @@ const ProjectDetails = () => {
               Review the detailed brief below and submit your proposal with deliverable timelines.
             </p>
           </div>
-          <button
-            onClick={handleSubmitProposal}
-            disabled={submitting}
-            className="inline-flex items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366F1]/20 hover:brightness-110 transition active:scale-[0.98] disabled:opacity-50"
-          >
-            <FiSend className="w-4 h-4" />
-            {submitting ? "Sending..." : "Submit Proposal"}
-          </button>
+
+          {isPrivate ? (
+            <span className="inline-flex items-center gap-2 rounded-3xl bg-amber-500/10 border border-amber-500/20 px-5 py-3 text-sm font-semibold text-amber-400">
+              <FiLock className="w-4 h-4" />
+              Private Project (Invitation Only)
+            </span>
+          ) : (
+            <Button
+              icon={<FiSend />}
+              onClick={() => setProposalModalOpen(true)}
+            >
+              Submit Proposal
+            </Button>
+          )}
         </div>
       </div>
 
@@ -176,8 +231,73 @@ const ProjectDetails = () => {
           )}
         </aside>
       </div>
+
+      {/* Submit Proposal Modal */}
+      <Modal
+        isOpen={proposalModalOpen}
+        onClose={() => setProposalModalOpen(false)}
+        title={`Submit Proposal for "${project.title}"`}
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={handleSubmitProposal} className="space-y-5">
+          <div>
+            <label className="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-2">
+              Bid Amount ($)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={bidAmount}
+              onChange={(e) => setBidAmount(e.target.value)}
+              placeholder="e.g. 500"
+              className="glass-input w-full rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm text-white outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-2">
+              Estimated Completion Days
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={estimatedDays}
+              onChange={(e) => setEstimatedDays(e.target.value)}
+              placeholder="e.g. 7"
+              className="glass-input w-full rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm text-white outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-2">
+              Cover Letter
+            </label>
+            <textarea
+              rows={5}
+              value={coverLetter}
+              onChange={(e) => setCoverLetter(e.target.value)}
+              placeholder="Detail your relevant experience, proposed methodology, and deliverable commitments..."
+              className="glass-input w-full rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setProposalModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={submitting} icon={<FiSend />}>
+              Submit Proposal
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
 
 export default ProjectDetails;
+

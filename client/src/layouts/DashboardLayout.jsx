@@ -9,6 +9,8 @@ import {
   FiSearch,
   FiSettings,
   FiBriefcase,
+  FiFileText,
+  FiMail,
 } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
@@ -38,6 +40,8 @@ function DashboardLayout() {
           { path: "/freelancer", label: "Dashboard", icon: FiGrid },
           { path: "/freelancer/profile", label: "My Profile", icon: FiUser },
           { path: "/freelancer/browse-projects", label: "Browse Projects", icon: FiSearch },
+          { path: "/freelancer/my-proposals", label: "My Proposals", icon: FiFileText },
+          { path: "/freelancer/my-invitations", label: "My Invitations", icon: FiMail },
           { path: "/freelancer/clients", label: "Browse Clients", icon: FiBriefcase },
           { path: "/settings", label: "Settings", icon: FiSettings },
         ]

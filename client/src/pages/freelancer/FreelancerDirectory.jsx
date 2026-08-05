@@ -7,12 +7,12 @@ import {
   FiClock,
   FiDollarSign,
   FiEye,
-  FiGithub,
-  FiLinkedin,
-  FiGlobe,
-  FiFileText,
+  FiSend,
 } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
+import { createInvitationApi } from "../../api/apiServices";
 import GlassCard from "../../components/GlassCard";
 import SkillBadge from "../../components/SkillBadge";
 import AvailabilityBadge from "../../components/AvailabilityBadge";
@@ -23,33 +23,55 @@ import PortfolioCard from "../../components/PortfolioCard";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 function FreelancerDirectory() {
+  const { role } = useAuth();
   const [freelancers, setFreelancers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedFreelancer, setSelectedFreelancer] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // Client Private Projects state for invitations
+  const [privateProjects, setPrivateProjects] = useState([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteTarget, setInviteTarget] = useState(null); // target freelancer
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviting, setInviting] = useState(false);
+
   useEffect(() => {
-    const fetchFreelancers = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const res = await api.get("/freelancer");
         if (res.data?.freelancers) {
           setFreelancers(res.data.freelancers);
         }
+
+        // If client, fetch client's projects for invitations
+        if (role === "client") {
+          const projectRes = await api.get("/project");
+          if (projectRes.data?.projects) {
+            const privates = projectRes.data.projects.filter(
+              (p) => p.visibility === "Private"
+            );
+            setPrivateProjects(privates);
+            if (privates.length > 0) {
+              setSelectedProjectId(privates[0]._id);
+            }
+          }
+        }
       } catch (err) {
-        console.error("Error fetching freelancers", err);
+        console.error("Error fetching directory data", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchFreelancers();
-  }, []);
+    fetchData();
+  }, [role]);
 
   const handleViewProfile = async (id) => {
     try {
       setDetailLoading(true);
-      // Send GET /api/freelancer/:id with query param fallback to match controller logic
       const res = await api.get(`/freelancer/${id}`, { params: { id } });
       if (res.data?.freelancer) {
         setSelectedFreelancer(res.data.freelancer);
@@ -58,6 +80,49 @@ function FreelancerDirectory() {
       console.error("Error fetching freelancer details", err);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleOpenInviteModal = (freelancer) => {
+    if (privateProjects.length === 0) {
+      toast.error("You don't have any Private projects to invite freelancers to.");
+      return;
+    }
+    setInviteTarget(freelancer);
+    if (!selectedProjectId && privateProjects.length > 0) {
+      setSelectedProjectId(privateProjects[0]._id);
+    }
+    setInviteMessage("");
+    setInviteModalOpen(true);
+  };
+
+  const handleSendInvitation = async (e) => {
+    e.preventDefault();
+    if (!selectedProjectId) {
+      toast.error("Please select a private project.");
+      return;
+    }
+    const freelancerUserId = inviteTarget?.user?._id || inviteTarget?.user;
+    if (!freelancerUserId) {
+      toast.error("Invalid freelancer information.");
+      return;
+    }
+
+    try {
+      setInviting(true);
+      const res = await createInvitationApi({
+        project: selectedProjectId,
+        freelancer: freelancerUserId,
+        message: inviteMessage,
+      });
+      toast.success(res.message || "Invitation sent successfully!");
+      setInviteModalOpen(false);
+      setInviteTarget(null);
+      setInviteMessage("");
+    } catch (err) {
+      console.error("Invitation error:", err);
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -169,16 +234,27 @@ function FreelancerDirectory() {
                   </div>
                 </div>
 
-                {/* Action button */}
-                <div className="pt-5 mt-4 border-t border-white/10">
+                {/* Action buttons */}
+                <div className="pt-5 mt-4 border-t border-white/10 flex gap-2">
                   <Button
                     variant="secondary"
-                    className="w-full"
+                    className="flex-1"
                     icon={<FiEye />}
                     onClick={() => handleViewProfile(freelancer._id)}
                   >
                     View Profile
                   </Button>
+
+                  {role === "client" && (
+                    <Button
+                      variant="primary"
+                      className="flex-1"
+                      icon={<FiSend />}
+                      onClick={() => handleOpenInviteModal(freelancer)}
+                    >
+                      Invite
+                    </Button>
+                  )}
                 </div>
               </GlassCard>
             );
@@ -209,7 +285,7 @@ function FreelancerDirectory() {
                 alt={selectedFreelancer.user?.fullName}
                 className="w-20 h-20 rounded-2xl object-cover border border-white/10 bg-[#09090B]"
               />
-              <div className="space-y-2 text-center sm:text-left">
+              <div className="space-y-2 text-center sm:text-left flex-1">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                   <h3 className="text-2xl font-bold text-white">{selectedFreelancer.user?.fullName}</h3>
                   <AvailabilityBadge availability={selectedFreelancer.availability} />
@@ -229,6 +305,19 @@ function FreelancerDirectory() {
                   </span>
                 </div>
               </div>
+              {role === "client" && (
+                <Button
+                  variant="primary"
+                  icon={<FiSend />}
+                  onClick={() => {
+                    const target = selectedFreelancer;
+                    setSelectedFreelancer(null);
+                    handleOpenInviteModal(target);
+                  }}
+                >
+                  Invite to Project
+                </Button>
+              )}
             </div>
 
             {/* Quick Metrics */}
@@ -285,8 +374,68 @@ function FreelancerDirectory() {
           </div>
         )}
       </Modal>
+
+      {/* Invite Modal */}
+      <Modal
+        isOpen={inviteModalOpen}
+        onClose={() => {
+          setInviteModalOpen(false);
+          setInviteTarget(null);
+        }}
+        title={`Invite ${inviteTarget?.user?.fullName || "Freelancer"} to Private Project`}
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleSendInvitation} className="space-y-5">
+          <div>
+            <label className="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-2">
+              Select Private Project
+            </label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="glass-input w-full rounded-2xl border border-white/10 bg-[#0F172A] px-4 py-3 text-sm text-white outline-none"
+            >
+              {privateProjects.map((p) => (
+                <option key={p._id} value={p._id} className="bg-[#0F172A] text-white">
+                  {p.title} (${p.budget})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-2">
+              Invitation Message
+            </label>
+            <textarea
+              rows={4}
+              value={inviteMessage}
+              onChange={(e) => setInviteMessage(e.target.value)}
+              placeholder="Explain why you are inviting this freelancer and outline key expectations..."
+              className="glass-input w-full rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setInviteModalOpen(false);
+                setInviteTarget(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={inviting} icon={<FiSend />}>
+              Send Invitation
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
 
 export default FreelancerDirectory;
+

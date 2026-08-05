@@ -57,7 +57,7 @@ function Dashboard() {
   const activeProjects =
     profile?.activeProjects ??
     projects.filter(
-      (p) => p.status === "Open" || p.status === "In Progress" || p.status === "Hiring"
+      (p) => p.status === "Open" || p.status === "In Progress" || p.status === "Hiring" || p.status === "Hired"
     ).length;
   const completedProjects =
     profile?.completedProjects ?? projects.filter((p) => p.status === "Completed").length;

@@ -10,8 +10,11 @@ import {
   FiFolder,
   FiArrowRight,
   FiBriefcase,
+  FiFileText,
+  FiMail,
 } from "react-icons/fi";
 import api from "../../api/axios";
+import { getMyProposalsApi, getMyInvitationsApi } from "../../api/apiServices";
 import StatsCard from "../../components/StatsCard";
 import GlassCard from "../../components/GlassCard";
 import Button from "../../components/Button";
@@ -20,15 +23,19 @@ import SkeletonLoader from "../../components/SkeletonLoader";
 function Dashboard() {
   const [profile, setProfile] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [proposalCount, setProposalCount] = useState(0);
+  const [invitationCount, setInvitationCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFreelancerDashboard = async () => {
       try {
         setLoading(true);
-        const [profileRes, projectsRes] = await Promise.allSettled([
+        const [profileRes, projectsRes, proposalsRes, invitationsRes] = await Promise.allSettled([
           api.get("/freelancer/profile"),
           api.get("/project"),
+          getMyProposalsApi(),
+          getMyInvitationsApi(),
         ]);
 
         if (profileRes.status === "fulfilled" && profileRes.value.data?.freelancer) {
@@ -37,6 +44,14 @@ function Dashboard() {
 
         if (projectsRes.status === "fulfilled" && projectsRes.value.data?.projects) {
           setProjects(projectsRes.value.data.projects);
+        }
+
+        if (proposalsRes.status === "fulfilled" && proposalsRes.value?.proposals) {
+          setProposalCount(proposalsRes.value.proposals.length);
+        }
+
+        if (invitationsRes.status === "fulfilled" && invitationsRes.value?.invitations) {
+          setInvitationCount(invitationsRes.value.invitations.length);
         }
       } catch (err) {
         console.error("Freelancer dashboard error:", err);
@@ -71,10 +86,16 @@ function Dashboard() {
               Welcome back, {profile?.user?.fullName || "Freelancer"}
             </h1>
             <p className="mt-2 text-sm text-gray-400 max-w-xl">
-              {profile?.professionalTitle || "Professional Freelancer"} · Keep track of active jobs, earnings, and client proposals.
+              {profile?.professionalTitle || "Professional Freelancer"} · Keep track of active jobs, earnings, proposals, and client invitations.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to="/freelancer/my-proposals">
+              <Button variant="secondary" icon={<FiFileText />}>My Proposals ({proposalCount})</Button>
+            </Link>
+            <Link to="/freelancer/my-invitations">
+              <Button variant="secondary" icon={<FiMail />}>Invitations ({invitationCount})</Button>
+            </Link>
             <Link to="/freelancer/browse-projects">
               <Button icon={<FiSearch />}>Browse Projects</Button>
             </Link>
@@ -85,25 +106,25 @@ function Dashboard() {
       {/* Top Statistic Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         <StatsCard
+          title="Submitted Proposals"
+          value={proposalCount}
+          subtitle="Active & history proposals"
+          icon={<FiFileText className="w-5 h-5" />}
+          accent="from-[#6366F1] to-[#3B82F6]"
+        />
+        <StatsCard
+          title="Direct Invitations"
+          value={invitationCount}
+          subtitle="Client invitations received"
+          icon={<FiMail className="w-5 h-5" />}
+          accent="from-amber-500 to-orange-600"
+        />
+        <StatsCard
           title="Completed Projects"
           value={completedProjects}
           subtitle="Delivered to clients"
           icon={<FiCheckCircle className="w-5 h-5" />}
           accent="from-emerald-500 to-teal-600"
-        />
-        <StatsCard
-          title="Ongoing Projects"
-          value={ongoingProjects}
-          subtitle="Currently active work"
-          icon={<FiActivity className="w-5 h-5" />}
-          accent="from-[#6366F1] to-[#3B82F6]"
-        />
-        <StatsCard
-          title="Hours Worked"
-          value={`${hoursWorked} hrs`}
-          subtitle="Total logged billable time"
-          icon={<FiClock className="w-5 h-5" />}
-          accent="from-[#3B82F6] to-[#8B5CF6]"
         />
         <StatsCard
           title="Total Earnings"
@@ -176,30 +197,45 @@ function Dashboard() {
         {/* Right Side: Recent Activity Timeline */}
         <div className="space-y-6">
           <GlassCard hover={false} className="p-6">
-            <h2 className="text-lg font-bold text-white font-display mb-2">Recent Activity</h2>
-            <p className="text-xs text-gray-400 mb-6">Latest milestones and updates</p>
+            <h2 className="text-lg font-bold text-white font-display mb-2">Quick Navigation</h2>
+            <p className="text-xs text-gray-400 mb-6">Manage your proposal & invitation pipelines</p>
 
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/10">
-              <div className="relative">
-                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#6366F1] ring-4 ring-[#09090B]" />
-                <p className="text-xs font-semibold text-white">Profile Synchronized</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Your freelancer profile is live.</p>
-                <span className="text-[10px] text-gray-500">Just now</span>
-              </div>
+            <div className="space-y-3">
+              <Link
+                to="/freelancer/my-proposals"
+                className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-[#6366F1]">
+                    <FiFileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white group-hover:text-[#6366F1] transition">
+                      My Proposals
+                    </h4>
+                    <p className="text-xs text-gray-400">{proposalCount} proposals submitted</p>
+                  </div>
+                </div>
+                <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition" />
+              </Link>
 
-              <div className="relative">
-                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#3B82F6] ring-4 ring-[#09090B]" />
-                <p className="text-xs font-semibold text-white">Browse Client Marketplace</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">New client requirements posted today.</p>
-                <span className="text-[10px] text-gray-500">2 hours ago</span>
-              </div>
-
-              <div className="relative">
-                <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-[#09090B]" />
-                <p className="text-xs font-semibold text-white">System Update</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Platform performance updated.</p>
-                <span className="text-[10px] text-gray-500">1 day ago</span>
-              </div>
+              <Link
+                to="/freelancer/my-invitations"
+                className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <FiMail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white group-hover:text-amber-400 transition">
+                      Client Invitations
+                    </h4>
+                    <p className="text-xs text-gray-400">{invitationCount} invitations received</p>
+                  </div>
+                </div>
+                <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition" />
+              </Link>
             </div>
 
             <div className="pt-6 mt-6 border-t border-white/10 space-y-3">
