@@ -10,7 +10,7 @@ import clientRoutes from "./routes/client.routes.js";
 import freelancerRoutes from "./routes/freelancer.routes.js";
 import authMiddleware from "./middlewares/auth.middleware.js";
 import proposalRoutes from "./routes/proposal.route.js";
-
+import invitationRoutes from "./routes/invitation.route.js";
 import aiRoutes from './routes/ai.route.js';
 
 import path from "path";
@@ -48,7 +48,7 @@ app.use("/api/project", projectRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/freelancer", freelancerRoutes);
 app.use("/api/proposal", proposalRoutes);
-
+app.use("/api/invitation", invitationRoutes);
 app.use("/api/ai" ,  aiRoutes);
 
 
