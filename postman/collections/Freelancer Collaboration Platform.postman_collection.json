@@ -1,0 +1,242 @@
+{
+  "info": {
+    "_postman_id": "4fb880d9-cf0a-4cdb-9d92-81919ad89c6e",
+    "name": "Freelancer Collaboration Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "AUTH",
+      "item": [
+        {
+          "name": "Register",
+          "id": "48840b6d-8998-4ab6-89ef-003d5ed8dea3",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"fullName\": \"Animesh\",\r\n  \"email\": \"animeshsamantaray2@gmail.com\",\r\n  \"phone\": \"9876543210\",\r\n  \"password\": \"123456\",\r\n  \"role\": \"freelancer\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "id": "25393f05-74bd-43e2-bdce-e9ab72431de9",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\r\n  \"email\": \"animeshsamantaray2@gmail.com\",\r\n  \r\n  \"password\": \"123456\"\r\n \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "send reset password otp",
+          "id": "f159ce1a-bb06-4ccb-9dac-90cf64e07a82",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\r\n  \"email\": \"animeshsamantaray2@gmail.com\"\r\n  \r\n\r\n \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/send-reset-otp",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "send-reset-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "change password",
+          "id": "d7f4b87e-2f5a-403c-a2c5-a79886c8b0d2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\r\n  \"email\": \"animeshsamantaray2@gmail.com\",\r\n  \r\n\"inputOtp\": \"568325\",\r\n  \"newPassword\": \"123456\"\r\n \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/change-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "change-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My Profile Details",
+          "id": "afac651e-bcec-45a4-a9e5-3383e6c77f84",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ],
+      "id": "36153bce-1a4e-4751-bff2-c0d6cda62827"
+    },
+    {
+      "name": "PROJECT",
+      "item": [
+        {
+          "name": "create",
+          "id": "7315a2b6-d280-4c97-be18-53669a03e9a7",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\r\n  \"email\": \"animeshsamantaray2@gmail.com\",\r\n  \r\n\"inputOtp\": \"568325\",\r\n  \"newPassword\": \"123456\"\r\n \r\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/project",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "project"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "3cade585-cb56-400e-9d60-bccc57d855b1"
+    },
+    {
+      "name": "PROPOSAL",
+      "item": [
+        {
+          "name": "give proposal",
+          "id": "03661110-77c0-495b-b6dd-adfe7ae69c40",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"project\": \"6a72eac789f9f3700b9682e4\",\r\n  \"client\": \"6a7064e17e580ec731308e81\",\r\n  \"coverLetter\": \"I have 4 years of React experience and can deliver on time.\",\r\n  \"bidAmount\": 450,\r\n  \"estimatedDays\": 10\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/proposal",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "proposal"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "id": "72e68a88-9004-472e-989d-5f5fd5d5c31c",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "client check proposal",
+          "id": "ce1a9b2c-ccd0-4310-83ed-6358d35ea790",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "update status of  poposal",
+          "id": "c15fc138-cf7e-47ad-82d9-1db38a6bc9ed",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ],
+      "id": "b8ea4856-8af8-419b-ad93-cbecf5b266fd"
+    }
+  ]
+}

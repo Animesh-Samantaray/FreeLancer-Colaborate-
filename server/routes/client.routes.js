@@ -26,7 +26,7 @@ router.put(
   updateClientProfile
 );
 
-// Public client profile (authenticated users)
+// Public client profile 
 router.get(
   "/:id",
   authMiddleware,
