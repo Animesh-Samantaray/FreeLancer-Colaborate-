@@ -16,6 +16,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
 import Modal from "../../components/Modal";
 import Button from "../../components/Button";
+import MilestonesSection from "../../components/MilestonesSection";
 import { useProfile } from "../../context/ProfileContext";
 
 const ProjectDetails = () => {
@@ -233,6 +234,9 @@ const ProjectDetails = () => {
           )}
         </aside>
       </div>
+
+      {/* Milestones Section */}
+      <MilestonesSection projectId={id} project={project} />
 
       {/* Submit Proposal Modal */}
       <Modal
