@@ -1,5 +1,30 @@
 import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
+import ClientProfile from "../models/ClientProfile.model.js";
+import FreelancerProfile from "../models/FreelancerProfile.model.js";
+
+export const updateProjectStatsOnCompletion = async (project, oldStatus) => {
+  if (oldStatus !== "Completed" && project.status === "Completed") {
+    const clientProfile = await ClientProfile.findOne({ user: project.client });
+    if (clientProfile) {
+      clientProfile.completedProjects += 1;
+      clientProfile.activeProjects = Math.max(0, clientProfile.activeProjects - 1);
+      await clientProfile.save();
+    }
+
+    for (const freelancerId of project.freelancers) {
+      const freelancerProfile = await FreelancerProfile.findOne({ user: freelancerId });
+      if (freelancerProfile) {
+        freelancerProfile.completedProjects += 1;
+        freelancerProfile.ongoingProjects = Math.max(0, freelancerProfile.ongoingProjects - 1);
+        if (freelancerProfile.ongoingProjects === 0) {
+          freelancerProfile.availability = "Available";
+        }
+        await freelancerProfile.save();
+      }
+    }
+  }
+};
 
 export const createProject = async (req, res) => {
   try {
@@ -44,6 +69,15 @@ export const createProject = async (req, res) => {
       deadline,
       visibility,
     });
+    await ClientProfile.findOneAndUpdate(
+  { user: req.user.id },
+  {
+    $inc: {
+      totalProjects: 1,
+      activeProjects: 1,
+    },
+  }
+);
 
     return res.status(201).json({
       success: true,
@@ -149,6 +183,9 @@ export const updateProject = async (req, res) => {
       });
     }
 
+    // Save previous status
+    const oldStatus = project.status;
+
     const {
       title,
       description,
@@ -171,6 +208,11 @@ export const updateProject = async (req, res) => {
 
     await project.save();
 
+    // Update statistics only when project becomes completed
+    if (oldStatus !== "Completed" && project.status === "Completed") {
+      await updateProjectStatsOnCompletion(project, oldStatus);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Project updated successfully.",
@@ -192,19 +234,40 @@ export const deleteProject = async (req, res) => {
   try {
     const projectId = req.params.id;
     const userId = req.user.id;
+
+    // Admin
     if (req.user.role === "admin") {
+      const project = await Project.findById(projectId);
+
+      if (!project) {
+        return res.status(404).json({
+          success: false,
+          message: "Project not found.",
+        });
+      }
+
       await Project.findByIdAndDelete(projectId);
+
+      const clientProfile = await ClientProfile.findOne({ user: project.client });
+      if (clientProfile) {
+        clientProfile.totalProjects = Math.max(0, clientProfile.totalProjects - 1);
+        if (project.status !== "Completed") {
+          clientProfile.activeProjects = Math.max(0, clientProfile.activeProjects - 1);
+        }
+        await clientProfile.save();
+      }
+
       return res.status(200).json({
         success: true,
         message: "Project deleted successfully.",
       });
     }
+
+    // Client
     const project = await Project.findOneAndDelete({
       _id: projectId,
       client: userId,
     });
-    
-    
 
     if (!project) {
       return res.status(404).json({
@@ -213,11 +276,19 @@ export const deleteProject = async (req, res) => {
       });
     }
 
+    const clientProfile = await ClientProfile.findOne({ user: project.client });
+    if (clientProfile) {
+      clientProfile.totalProjects = Math.max(0, clientProfile.totalProjects - 1);
+      if (project.status !== "Completed") {
+        clientProfile.activeProjects = Math.max(0, clientProfile.activeProjects - 1);
+      }
+      await clientProfile.save();
+    }
+
     return res.status(200).json({
       success: true,
       message: "Project deleted successfully.",
     });
-
   } catch (error) {
     console.error("Delete Project Error:", error);
 
@@ -237,6 +308,18 @@ export const deleteAllProjects = async (req, res) => {
         success: false,
         message: "Access denied.",
       });
+    }
+    const projects = await Project.find();
+
+    for (const project of projects) {
+      const clientProfile = await ClientProfile.findOne({ user: project.client });
+      if (clientProfile) {
+        clientProfile.totalProjects = Math.max(0, clientProfile.totalProjects - 1);
+        if (project.status !== "Completed") {
+          clientProfile.activeProjects = Math.max(0, clientProfile.activeProjects - 1);
+        }
+        await clientProfile.save();
+      }
     }
 
     const result = await Project.deleteMany({});

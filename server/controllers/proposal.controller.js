@@ -224,10 +224,13 @@ export const updateProposal = async (req, res) => {
       });
     }
 
+    const oldStatus = proposal.status;
     proposal.status = status;
     await proposal.save();
+    
 
     if (status === "Accepted") {
+      const isAlreadyAccepted = oldStatus === "Accepted";
       
       await Proposal.updateMany(
         {
@@ -250,6 +253,15 @@ export const updateProposal = async (req, res) => {
       project.status = "Hired";
 
       await project.save();
+
+      if (!isAlreadyAccepted) {
+        const freelancerProfile = await FreelancerProfile.findOne({ user: proposal.freelancer });
+        if (freelancerProfile) {
+          freelancerProfile.ongoingProjects += 1;
+          freelancerProfile.availability = "Busy";
+          await freelancerProfile.save();
+        }
+      }
     }
 
     return res.status(200).json({
