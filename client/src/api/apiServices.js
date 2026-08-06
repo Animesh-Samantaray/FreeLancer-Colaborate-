@@ -67,3 +67,43 @@ export const updateInvitationStatusApi = async (id, status) => {
   const response = await api.put(`/invitation/${id}`, { status });
   return response.data;
 };
+
+/* ==========================================================================
+   MILESTONE API SERVICES
+   ========================================================================== */
+
+// Create a new milestone for a project (Client / Admin)
+export const createMilestoneApi = async (data) => {
+  const response = await api.post("/milestone", data);
+  return response.data;
+};
+
+// Get all milestones for a project
+export const getProjectMilestonesApi = async (projectId) => {
+  const response = await api.get(`/milestone/project/${projectId}`);
+  return response.data;
+};
+
+// Get single milestone details by ID
+export const getMilestoneByIdApi = async (id) => {
+  const response = await api.get(`/milestone/${id}`);
+  return response.data;
+};
+
+// Update milestone details (Title, Description, Amount, Due Date) (Client / Admin)
+export const updateMilestoneApi = async (id, data) => {
+  const response = await api.put(`/milestone/${id}`, data);
+  return response.data;
+};
+
+// Update milestone status (Pending, In Progress, Completed) (Freelancer / Admin)
+export const updateMilestoneStatusApi = async (id, status) => {
+  const response = await api.patch(`/milestone/${id}/status`, { status });
+  return response.data;
+};
+
+// Delete a milestone (Client / Admin)
+export const deleteMilestoneApi = async (id) => {
+  const response = await api.delete(`/milestone/${id}`);
+  return response.data;
+};

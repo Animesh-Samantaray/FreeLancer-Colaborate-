@@ -42,6 +42,8 @@ export const createMilestone = async (req, res) => {
 
     const milestone = await Milestone.create({
       project: projectId,
+      client: project.client,
+      freelancer: project.freelancers?.[0] || null,
       title: title.trim(),
       description,
       amount,
@@ -282,11 +284,13 @@ export const updateMilestoneStatus = async (req, res) => {
       });
     }
 
-    // Only client or admin can change milestone status
-    if (
-      project.client.toString() !== userId &&
-      role !== "admin"
-    ) {
+    // Project owner, hired freelancer, or admin can change milestone status
+    const isClient = project.client.toString() === userId;
+    const isFreelancer = Array.isArray(project.freelancers) && project.freelancers.some(
+      (id) => id.toString() === userId
+    );
+
+    if (!isClient && !isFreelancer && role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",

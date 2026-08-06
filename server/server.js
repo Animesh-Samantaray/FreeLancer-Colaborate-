@@ -12,6 +12,7 @@ import authMiddleware from "./middlewares/auth.middleware.js";
 import proposalRoutes from "./routes/proposal.route.js";
 import invitationRoutes from "./routes/invitation.route.js";
 import aiRoutes from './routes/ai.route.js';
+import milestoneRoutes from "./routes/milestone.route.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -50,6 +51,8 @@ app.use("/api/freelancer", freelancerRoutes);
 app.use("/api/proposal", proposalRoutes);
 app.use("/api/invitation", invitationRoutes);
 app.use("/api/ai" ,  aiRoutes);
+app.use("/api/milestone", milestoneRoutes);
+app.use("/api/milestones", milestoneRoutes);
 
 
 app.get("/", (req, res) => {

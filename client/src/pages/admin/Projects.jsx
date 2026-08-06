@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { FiSearch, FiTrash2, FiFolder, FiDollarSign } from "react-icons/fi";
+import { FiSearch, FiTrash2, FiFolder, FiDollarSign, FiCheckSquare } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import Modal from "../../components/Modal";
+import MilestonesSection from "../../components/MilestonesSection";
 
 const AdminProjects = () => {
   const [projects, setProjects] = useState([]);
@@ -12,6 +14,8 @@ const AdminProjects = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [milestonesModalOpen, setMilestonesModalOpen] = useState(false);
+  const [activeProject, setActiveProject] = useState(null);
 
   const fetchProjects = async () => {
     try {
@@ -131,12 +135,23 @@ const AdminProjects = () => {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <button
-                        onClick={() => setDeleteTargetId(project._id)}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
-                      >
-                        <FiTrash2 className="w-3.5 h-3.5" /> Remove
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveProject(project);
+                            setMilestonesModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-3.5 py-2 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/20 transition"
+                        >
+                          <FiCheckSquare className="w-3.5 h-3.5" /> Milestones
+                        </button>
+                        <button
+                          onClick={() => setDeleteTargetId(project._id)}
+                          className="inline-flex items-center gap-1.5 rounded-2xl border border-red-500/20 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
+                        >
+                          <FiTrash2 className="w-3.5 h-3.5" /> Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -150,6 +165,21 @@ const AdminProjects = () => {
           />
         )}
       </div>
+
+      {/* Admin Milestones Modal */}
+      <Modal
+        isOpen={milestonesModalOpen}
+        onClose={() => setMilestonesModalOpen(false)}
+        title={`Manage Milestones - "${activeProject?.title || "Project"}"`}
+        maxWidth="max-w-4xl"
+      >
+        {activeProject && (
+          <MilestonesSection
+            projectId={activeProject._id}
+            project={activeProject}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

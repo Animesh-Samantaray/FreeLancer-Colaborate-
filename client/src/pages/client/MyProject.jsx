@@ -11,6 +11,7 @@ import {
   FiUser,
   FiDollarSign,
   FiCalendar,
+  FiCheckSquare,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
@@ -24,6 +25,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
 import Modal from "../../components/Modal";
 import Button from "../../components/Button";
+import MilestonesSection from "../../components/MilestonesSection";
 import { Link } from "react-router-dom";
 import { useProfile } from "../../context/ProfileContext";
 
@@ -44,6 +46,10 @@ const MyProject = () => {
   const [invitationsModalOpen, setInvitationsModalOpen] = useState(false);
   const [invitations, setInvitations] = useState([]);
   const [invitationsLoading, setInvitationsLoading] = useState(false);
+
+  // Milestones modal state
+  const [milestonesModalOpen, setMilestonesModalOpen] = useState(false);
+  const [milestonesProject, setMilestonesProject] = useState(null);
 
   const fetchProjects = async () => {
     try {
@@ -228,7 +234,19 @@ const MyProject = () => {
                     <span className="font-semibold text-gray-300">{project.visibility || "Public"}</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<FiCheckSquare className="text-[#6366F1]" />}
+                      onClick={() => {
+                        setMilestonesProject(project);
+                        setMilestonesModalOpen(true);
+                      }}
+                    >
+                      Milestones
+                    </Button>
+
                     {isPublic ? (
                       <Button
                         variant="secondary"
@@ -236,7 +254,7 @@ const MyProject = () => {
                         icon={<FiFileText />}
                         onClick={() => handleOpenProposals(project)}
                       >
-                        View Proposals
+                        Proposals
                       </Button>
                     ) : (
                       <Button
@@ -245,7 +263,7 @@ const MyProject = () => {
                         icon={<FiMail />}
                         onClick={() => handleOpenInvitations(project)}
                       >
-                        View Invitations
+                        Invitations
                       </Button>
                     )}
 
@@ -485,6 +503,21 @@ const MyProject = () => {
           <EmptyState
             title="No invitations sent"
             description="You have not sent invitations to any freelancers for this private project yet."
+          />
+        )}
+      </Modal>
+
+      {/* Milestones Modal */}
+      <Modal
+        isOpen={milestonesModalOpen}
+        onClose={() => setMilestonesModalOpen(false)}
+        title={`Project Milestones - "${milestonesProject?.title || "Project"}"`}
+        maxWidth="max-w-4xl"
+      >
+        {milestonesProject && (
+          <MilestonesSection
+            projectId={milestonesProject._id}
+            project={milestonesProject}
           />
         )}
       </Modal>
