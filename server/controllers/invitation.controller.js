@@ -1,6 +1,7 @@
 import Invitation from "../models/Invitation.model.js";
 import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
+import FreelancerProfile from "../models/FreelancerProfile.model.js";
 
 export const createInvitation = async (req, res) => {
   try {
@@ -259,6 +260,13 @@ export const updateInvitation = async (req, res) => {
         project.status = "Hired";
 
         await project.save();
+      }
+
+      const freelancerProfile = await FreelancerProfile.findOne({ user: userId });
+      if (freelancerProfile) {
+        freelancerProfile.ongoingProjects += 1;
+        freelancerProfile.availability = "Busy";
+        await freelancerProfile.save();
       }
     }
 
