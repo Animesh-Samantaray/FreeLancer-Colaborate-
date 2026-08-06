@@ -2,45 +2,46 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiCheckCircle,
-  FiClock,
   FiDollarSign,
   FiActivity,
   FiSearch,
   FiUser,
   FiFolder,
   FiArrowRight,
-  FiBriefcase,
   FiFileText,
   FiMail,
+  FiStar,
+  FiClock,
+  FiBriefcase,
+  FiCode,
+  FiRefreshCw,
+  FiAlertCircle,
 } from "react-icons/fi";
 import api from "../../api/axios";
 import { getMyProposalsApi, getMyInvitationsApi } from "../../api/apiServices";
+import { useProfile } from "../../context/ProfileContext";
 import StatsCard from "../../components/StatsCard";
 import GlassCard from "../../components/GlassCard";
+import SkillBadge from "../../components/SkillBadge";
 import Button from "../../components/Button";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 function Dashboard() {
-  const [profile, setProfile] = useState(null);
+  const { profile, loading: profileLoading, error: profileError, refetchProfile } = useProfile();
   const [projects, setProjects] = useState([]);
   const [proposalCount, setProposalCount] = useState(0);
   const [invitationCount, setInvitationCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFreelancerDashboard = async () => {
+    const fetchFreelancerData = async () => {
       try {
-        setLoading(true);
-        const [profileRes, projectsRes, proposalsRes, invitationsRes] = await Promise.allSettled([
-          api.get("/freelancer/profile"),
+        setProjectsLoading(true);
+        const [projectsRes, proposalsRes, invitationsRes] = await Promise.allSettled([
           api.get("/project"),
           getMyProposalsApi(),
           getMyInvitationsApi(),
         ]);
-
-        if (profileRes.status === "fulfilled" && profileRes.value.data?.freelancer) {
-          setProfile(profileRes.value.data.freelancer);
-        }
 
         if (projectsRes.status === "fulfilled" && projectsRes.value.data?.projects) {
           setProjects(projectsRes.value.data.projects);
@@ -56,24 +57,41 @@ function Dashboard() {
       } catch (err) {
         console.error("Freelancer dashboard error:", err);
       } finally {
-        setLoading(false);
+        setProjectsLoading(false);
       }
     };
 
-    fetchFreelancerDashboard();
+    fetchFreelancerData();
   }, []);
 
-  if (loading) {
+  if (profileLoading && !profile) {
     return <SkeletonLoader type="profile" />;
   }
 
+  // Display statistics strictly from backend profile object without client calculations
   const completedProjects = profile?.completedProjects ?? 0;
   const ongoingProjects = profile?.ongoingProjects ?? 0;
-  const hoursWorked = profile?.totalHoursWorked ?? 0;
-  const totalEarnings = profile?.totalEarnings ?? 0;
+  const availability = profile?.availability || "Available";
+  const hourlyRate = profile?.hourlyRate ? `$${profile.hourlyRate}/hr` : "$0/hr";
+  const ratingDisplay = profile?.averageRating ? `${profile.averageRating.toFixed(1)} / 5` : "N/A";
+  const experienceYears = profile?.experience ? `${profile.experience} Yrs` : "0 Yrs";
+  const skillsList = profile?.skills || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Error Alert if API fetch fails */}
+      {profileError && (
+        <div className="glass-card border border-red-500/20 bg-red-500/10 p-4 rounded-2xl flex items-center justify-between gap-4 text-red-200">
+          <div className="flex items-center gap-3">
+            <FiAlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-sm">{profileError}</p>
+          </div>
+          <Button variant="secondary" size="sm" icon={<FiRefreshCw />} onClick={refetchProfile}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="glass-card border border-white/10 p-8 rounded-3xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-bl from-[#3B82F6]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -86,7 +104,7 @@ function Dashboard() {
               Welcome back, {profile?.user?.fullName || "Freelancer"}
             </h1>
             <p className="mt-2 text-sm text-gray-400 max-w-xl">
-              {profile?.professionalTitle || "Professional Freelancer"} · Keep track of active jobs, earnings, proposals, and client invitations.
+              {profile?.professionalTitle || "Professional Freelancer"} · Track project progress, client invitations, and availability status.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -103,22 +121,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Top Statistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        <StatsCard
-          title="Submitted Proposals"
-          value={proposalCount}
-          subtitle="Active & history proposals"
-          icon={<FiFileText className="w-5 h-5" />}
-          accent="from-[#6366F1] to-[#3B82F6]"
-        />
-        <StatsCard
-          title="Direct Invitations"
-          value={invitationCount}
-          subtitle="Client invitations received"
-          icon={<FiMail className="w-5 h-5" />}
-          accent="from-amber-500 to-orange-600"
-        />
+      {/* Primary Statistics Cards - Strictly fetched from Backend Freelancer Profile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatsCard
           title="Completed Projects"
           value={completedProjects}
@@ -127,18 +131,64 @@ function Dashboard() {
           accent="from-emerald-500 to-teal-600"
         />
         <StatsCard
-          title="Total Earnings"
-          value={`$${totalEarnings.toLocaleString()}`}
-          subtitle="Gross earnings recorded"
+          title="Ongoing Projects"
+          value={ongoingProjects}
+          subtitle="Currently in development"
+          icon={<FiActivity className="w-5 h-5" />}
+          accent="from-[#3B82F6] to-[#6366F1]"
+        />
+        <StatsCard
+          title="Availability"
+          value={availability}
+          subtitle={availability === "Available" ? "Ready for new projects" : "Currently occupied"}
+          icon={<FiClock className="w-5 h-5" />}
+          accent={availability === "Available" ? "from-emerald-500 to-green-600" : "from-amber-500 to-orange-600"}
+        />
+        <StatsCard
+          title="Hourly Rate"
+          value={hourlyRate}
+          subtitle="Base billing rate"
           icon={<FiDollarSign className="w-5 h-5" />}
           accent="from-purple-500 to-indigo-600"
+        />
+        <StatsCard
+          title="Rating"
+          value={ratingDisplay}
+          subtitle={`${profile?.totalReviews ?? 0} client reviews`}
+          icon={<FiStar className="w-5 h-5" />}
+          accent="from-yellow-400 to-amber-500"
         />
       </div>
 
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Side: Recommended Projects (2 cols) */}
+        {/* Left Side: Available Projects & Skills Overview (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Skills & Experience Info Box */}
+          <GlassCard hover={false} className="p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10 mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-white font-display">Professional Skills & Experience</h2>
+                <p className="text-xs text-gray-400">Maintained directly on your profile</p>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-white">
+                <FiBriefcase className="w-4 h-4 text-[#3B82F6]" />
+                <span>Experience: {experienceYears}</span>
+              </div>
+            </div>
+
+            {skillsList.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {skillsList.map((skill, index) => (
+                  <SkillBadge key={index} skill={skill} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">No skills listed yet. Add skills in your profile.</p>
+            )}
+          </GlassCard>
+
+          {/* Recommended Open Projects */}
           <GlassCard hover={false} className="p-6">
             <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
               <div>
@@ -155,7 +205,9 @@ function Dashboard() {
             </div>
 
             <div className="space-y-4">
-              {projects.length > 0 ? (
+              {projectsLoading ? (
+                <div className="py-8 text-center text-xs text-gray-400">Loading available projects...</div>
+              ) : projects.length > 0 ? (
                 projects.slice(0, 4).map((project) => (
                   <div
                     key={project._id}
@@ -194,7 +246,7 @@ function Dashboard() {
           </GlassCard>
         </div>
 
-        {/* Right Side: Recent Activity Timeline */}
+        {/* Right Side: Quick Navigation */}
         <div className="space-y-6">
           <GlassCard hover={false} className="p-6">
             <h2 className="text-lg font-bold text-white font-display mb-2">Quick Navigation</h2>
@@ -241,7 +293,7 @@ function Dashboard() {
             <div className="pt-6 mt-6 border-t border-white/10 space-y-3">
               <Link to="/freelancer/profile" className="block">
                 <Button variant="secondary" className="w-full" icon={<FiUser />}>
-                  View Public Profile
+                  Edit / View Public Profile
                 </Button>
               </Link>
             </div>

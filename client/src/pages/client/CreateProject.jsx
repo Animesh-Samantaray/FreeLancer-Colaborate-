@@ -4,6 +4,7 @@ import { FiClipboard, FiDollarSign, FiTag, FiEye, FiShield } from "react-icons/f
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { useProfile } from "../../context/ProfileContext";
 
 const categories = ["UI/UX Design", "Web Development", "Mobile App", "Marketing", "AI / ML"];
 const visibilityOptions = ["Public", "Private"];
@@ -13,6 +14,7 @@ function CreateProject() {
   const navigate = useNavigate();
   const projectId = searchParams.get("edit");
 
+  const { refetchProfile } = useProfile();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -88,6 +90,7 @@ function CreateProject() {
 
       if (response.data.success) {
         toast.success(projectId ? "Project updated successfully." : "Project created successfully.");
+        await refetchProfile();
         if (projectId) {
           navigate("/client/my-projects");
         } else {

@@ -2,6 +2,7 @@ import Invitation from "../models/Invitation.model.js";
 import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
+import ClientProfile from "../models/ClientProfile.model.js";
 
 export const createInvitation = async (req, res) => {
   try {
@@ -260,6 +261,12 @@ export const updateInvitation = async (req, res) => {
         project.status = "Hired";
 
         await project.save();
+      }
+
+      const clientProfile = await ClientProfile.findOne({ user: invitation.client });
+      if (clientProfile) {
+        clientProfile.totalHires = (clientProfile.totalHires || 0) + 1;
+        await clientProfile.save();
       }
 
       const freelancerProfile = await FreelancerProfile.findOne({ user: userId });

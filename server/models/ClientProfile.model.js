@@ -54,6 +54,11 @@ const clientProfileSchema = new mongoose.Schema(
       default: 0,
     },
 
+    totalHires: {
+      type: Number,
+      default: 0,
+    },
+
     totalSpent: {
       type: Number,
       default: 0,

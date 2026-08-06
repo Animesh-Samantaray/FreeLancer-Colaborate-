@@ -14,8 +14,10 @@ import { getMyInvitationsApi, updateInvitationStatusApi } from "../../api/apiSer
 import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
 import Button from "../../components/Button";
+import { useProfile } from "../../context/ProfileContext";
 
 const MyInvitations = () => {
+  const { refetchProfile } = useProfile();
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,6 +44,7 @@ const MyInvitations = () => {
       setActionLoadingId(id);
       const res = await updateInvitationStatusApi(id, status);
       toast.success(res.message || `Invitation ${status.toLowerCase()} successfully.`);
+      await refetchProfile();
       // Refresh list
       fetchMyInvitations();
     } catch (err) {

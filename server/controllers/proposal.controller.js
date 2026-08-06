@@ -1,6 +1,7 @@
 import Proposal from "../models/Proposal.model.js";
 import Project from "../models/Project.model.js";
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
+import ClientProfile from "../models/ClientProfile.model.js";
 
 export const createProposal = async (req, res) => {
 
@@ -255,6 +256,12 @@ export const updateProposal = async (req, res) => {
       await project.save();
 
       if (!isAlreadyAccepted) {
+        const clientProfile = await ClientProfile.findOne({ user: project.client });
+        if (clientProfile) {
+          clientProfile.totalHires = (clientProfile.totalHires || 0) + 1;
+          await clientProfile.save();
+        }
+
         const freelancerProfile = await FreelancerProfile.findOne({ user: proposal.freelancer });
         if (freelancerProfile) {
           freelancerProfile.ongoingProjects += 1;

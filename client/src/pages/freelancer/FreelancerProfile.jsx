@@ -27,8 +27,10 @@ import Modal from "../../components/Modal";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import { useProfile } from "../../context/ProfileContext";
 
 function FreelancerProfile() {
+  const { refetchProfile } = useProfile();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -159,6 +161,7 @@ function FreelancerProfile() {
       if (res.data?.freelancer) {
         setProfile(res.data.freelancer);
         toast.success(res.data.message || "Freelancer profile updated successfully!");
+        await refetchProfile();
         setIsEditModalOpen(false);
       }
     } catch (err) {
