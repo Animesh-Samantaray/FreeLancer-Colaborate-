@@ -65,6 +65,12 @@ const projectSchema = new mongoose.Schema(
       enum: ["Public", "Private"],
       default: "Public",
     },
+     milestones: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Milestone",
+      },
+    ]
   },
   {
     timestamps: true,

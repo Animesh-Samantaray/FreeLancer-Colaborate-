@@ -8,38 +8,45 @@ const milestoneSchema = new mongoose.Schema(
       required: true,
     },
 
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    freelancer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
     title: {
       type: String,
       required: true,
+      trim: true,
     },
 
     description: {
       type: String,
+      trim: true,
       default: "",
     },
 
     amount: {
       type: Number,
       required: true,
+      min: 0,
     },
 
-    deadline: {
+    dueDate: {
       type: Date,
       required: true,
     },
 
     status: {
       type: String,
-      enum: [
-        "Pending",
-        "In Progress",
-        "Completed",
-      ],
+      enum: ["Pending", "In Progress", "Completed"],
       default: "Pending",
-    },
-
-    completedAt: {
-      type: Date,
     },
   },
   {
@@ -47,4 +54,6 @@ const milestoneSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model("Milestone", milestoneSchema);
+const Milestone = mongoose.model("Milestone", milestoneSchema);
+
+export default Milestone;
