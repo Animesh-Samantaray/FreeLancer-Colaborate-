@@ -20,8 +20,10 @@ import Modal from "../../components/Modal";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import { useProfile } from "../../context/ProfileContext";
 
 function ClientProfile() {
+  const { refetchProfile } = useProfile();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -77,6 +79,7 @@ function ClientProfile() {
       if (res.data?.profile) {
         setProfile(res.data.profile);
         toast.success(res.data.message || "Profile updated successfully!");
+        await refetchProfile();
         setIsEditModalOpen(false);
       }
     } catch (err) {

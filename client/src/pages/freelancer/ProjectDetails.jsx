@@ -16,6 +16,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
 import Modal from "../../components/Modal";
 import Button from "../../components/Button";
+import { useProfile } from "../../context/ProfileContext";
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -75,6 +76,7 @@ const ProjectDetails = () => {
         estimatedDays: Number(estimatedDays),
       });
       toast.success(res.message || "Proposal submitted successfully!");
+      await refetchProfile();
       setProposalModalOpen(false);
       setCoverLetter("");
     } catch (err) {

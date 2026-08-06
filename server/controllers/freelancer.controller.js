@@ -1,5 +1,8 @@
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
 import User from "../models/User.model.js";
+import Project from "../models/Project.model.js";
+import Proposal from "../models/Proposal.model.js";
+import Invitation from "../models/Invitation.model.js";
 
 export const getAllFreelancers = async (req, res) => {
   try {
@@ -73,17 +76,66 @@ export const getFreelancerProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    let freelancer = await FreelancerProfile.findOne({
-      user: userId,
-    }).populate("user", "fullName email avatar role");
+    let freelancer = await FreelancerProfile.findOne({ user: userId });
 
     if (!freelancer) {
       // Create a default profile on demand if one doesn't exist
-      await FreelancerProfile.create({ user: userId });
-      freelancer = await FreelancerProfile.findOne({
-        user: userId,
-      }).populate("user", "fullName email avatar role");
+      freelancer = await FreelancerProfile.create({ user: userId });
     }
+
+    const freelancerIdSet = new Set([userId.toString()]);
+    if (freelancer._id) {
+      freelancerIdSet.add(freelancer._id.toString());
+    }
+    const freelancerIds = Array.from(freelancerIdSet);
+
+    // Find project IDs where freelancer's proposal was accepted
+    const acceptedProposals = await Proposal.find({
+      freelancer: { $in: freelancerIds },
+      status: "Accepted",
+    }).select("project");
+
+    // Find project IDs where freelancer's invitation was accepted
+    const acceptedInvitations = await Invitation.find({
+      freelancer: { $in: freelancerIds },
+      status: "Accepted",
+    }).select("project");
+
+    const acceptedProjectIds = [
+      ...acceptedProposals.map((p) => p.project),
+      ...acceptedInvitations.map((i) => i.project),
+    ];
+
+    // Query condition for any project belonging to this freelancer
+    const freelancerProjectsCondition = {
+      $or: [
+        { freelancers: { $in: freelancerIds } },
+        { _id: { $in: acceptedProjectIds } },
+      ],
+    };
+
+    // Calculate real-time accurate statistics directly from database
+    const completedProjects = await Project.countDocuments({
+      ...freelancerProjectsCondition,
+      status: "Completed",
+    });
+
+    const ongoingProjects = await Project.countDocuments({
+      ...freelancerProjectsCondition,
+      status: { $in: ["Hired", "In Progress", "Open", "Hiring"] },
+    });
+
+    freelancer.ongoingProjects = ongoingProjects;
+    freelancer.completedProjects = completedProjects;
+    if (ongoingProjects > 0 && freelancer.availability === "Available") {
+      freelancer.availability = "Busy";
+    }
+    await freelancer.save();
+
+    freelancer = await FreelancerProfile.findOne({ user: userId }).populate(
+      "user",
+      "fullName email avatar role"
+    );
 
     return res.status(200).json({
       success: true,

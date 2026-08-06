@@ -25,8 +25,10 @@ import EmptyState from "../../components/EmptyState";
 import Modal from "../../components/Modal";
 import Button from "../../components/Button";
 import { Link } from "react-router-dom";
+import { useProfile } from "../../context/ProfileContext";
 
 const MyProject = () => {
+  const { refetchProfile } = useProfile();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,6 +61,37 @@ const MyProject = () => {
     fetchProjects();
   }, []);
 
+  // Delete project
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm("Are you sure you want to delete this project?")) return;
+    try {
+      setActionLoadingId(projectId);
+      const res = await api.delete(`/project/${projectId}`);
+      toast.success(res.data?.message || "Project deleted successfully.");
+      await refetchProfile();
+      fetchProjects();
+    } catch (err) {
+      console.error("Delete project error:", err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Mark project as Completed
+  const handleMarkCompleted = async (projectId) => {
+    try {
+      setActionLoadingId(projectId);
+      const res = await api.put(`/project/${projectId}`, { status: "Completed" });
+      toast.success(res.data?.message || "Project marked as Completed!");
+      await refetchProfile();
+      fetchProjects();
+    } catch (err) {
+      console.error("Mark completed error:", err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // Fetch Proposals for a Public project
   const handleOpenProposals = async (project) => {
     setActiveProject(project);
@@ -80,10 +113,10 @@ const MyProject = () => {
       setActionLoadingId(proposalId);
       const res = await updateProposalStatusApi(proposalId, status);
       toast.success(res.message || `Proposal ${status.toLowerCase()} successfully.`);
-      // Refresh proposals list
+      // Refresh statistics & projects list
+      await refetchProfile();
       const updated = await getProjectProposalsApi(activeProject._id);
       setProposals(updated.proposals || []);
-      // Refresh main projects list to update project status if accepted
       fetchProjects();
     } catch (err) {
       console.error("Update proposal error:", err);
@@ -223,6 +256,28 @@ const MyProject = () => {
                       <span>Edit</span>
                       <FiChevronRight className="w-3.5 h-3.5" />
                     </Link>
+
+                    {project.status !== "Completed" && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<FiCheck />}
+                        onClick={() => handleMarkCompleted(project._id)}
+                        disabled={actionLoadingId === project._id}
+                      >
+                        Complete
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      icon={<FiTrash2 />}
+                      onClick={() => handleDeleteProject(project._id)}
+                      disabled={actionLoadingId === project._id}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
               </div>

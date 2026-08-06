@@ -1,23 +1,50 @@
 import ClientProfile from "../models/ClientProfile.model.js";
 import User from "../models/User.model.js";
+import Project from "../models/Project.model.js";
 
 export const getClientProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    let profile = await ClientProfile.findOne({ user: userId }).populate(
-      "user",
-      "fullName email avatar role"
-    );
+    let profile = await ClientProfile.findOne({ user: userId });
 
     if (!profile) {
       // Create a default profile on demand if one doesn't exist
-      await ClientProfile.create({ user: userId });
-      profile = await ClientProfile.findOne({ user: userId }).populate(
-        "user",
-        "fullName email avatar role"
-      );
+      profile = await ClientProfile.create({ user: userId });
     }
+
+    // Calculate real-time accurate statistics directly from database
+    const totalProjects = await Project.countDocuments({ client: userId });
+    const activeProjects = await Project.countDocuments({
+      client: userId,
+      status: { $in: ["Open", "Hiring", "Hired", "In Progress"] },
+    });
+    const completedProjects = await Project.countDocuments({
+      client: userId,
+      status: "Completed",
+    });
+
+    // Calculate total freelancers hired across client's projects
+    const clientProjects = await Project.find({ client: userId }).select("freelancers");
+    const hiredFreelancerIds = new Set();
+    clientProjects.forEach((p) => {
+      if (Array.isArray(p.freelancers)) {
+        p.freelancers.forEach((fId) => hiredFreelancerIds.add(fId.toString()));
+      }
+    });
+    const totalHires = hiredFreelancerIds.size;
+
+    // Synchronize profile counters
+    profile.totalProjects = totalProjects;
+    profile.activeProjects = activeProjects;
+    profile.completedProjects = completedProjects;
+    profile.totalHires = totalHires;
+    await profile.save();
+
+    profile = await ClientProfile.findOne({ user: userId }).populate(
+      "user",
+      "fullName email avatar role"
+    );
 
     return res.status(200).json({
       success: true,

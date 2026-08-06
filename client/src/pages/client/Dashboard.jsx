@@ -4,69 +4,71 @@ import {
   FiFolder,
   FiActivity,
   FiCheckCircle,
-  FiDollarSign,
   FiPlus,
   FiUsers,
   FiUser,
   FiArrowRight,
   FiEye,
+  FiStar,
+  FiRefreshCw,
+  FiAlertCircle,
 } from "react-icons/fi";
 import api from "../../api/axios";
+import { useProfile } from "../../context/ProfileContext";
 import StatsCard from "../../components/StatsCard";
 import GlassCard from "../../components/GlassCard";
 import Button from "../../components/Button";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 function Dashboard() {
-  const [profile, setProfile] = useState(null);
+  const { profile, loading: profileLoading, error: profileError, refetchProfile } = useProfile();
   const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchRecentProjects = async () => {
       try {
-        setLoading(true);
-        const [profileRes, projectsRes] = await Promise.allSettled([
-          api.get("/client/profile"),
-          api.get("/project"),
-        ]);
-
-        if (profileRes.status === "fulfilled" && profileRes.value.data?.profile) {
-          setProfile(profileRes.value.data.profile);
-        }
-
-        if (projectsRes.status === "fulfilled" && projectsRes.value.data?.projects) {
-          setProjects(projectsRes.value.data.projects);
+        setProjectsLoading(true);
+        const projectsRes = await api.get("/project");
+        if (projectsRes.data?.projects) {
+          setProjects(projectsRes.data.projects);
         }
       } catch (err) {
-        console.error("Dashboard error:", err);
+        console.error("Fetch projects error:", err);
       } finally {
-        setLoading(false);
+        setProjectsLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchRecentProjects();
   }, []);
 
-  if (loading) {
+  if (profileLoading && !profile) {
     return <SkeletonLoader type="profile" />;
   }
 
-  // Calculate statistics from profile or projects fallback
-  const totalProjects = profile?.totalProjects ?? projects.length;
-  const activeProjects =
-    profile?.activeProjects ??
-    projects.filter(
-      (p) => p.status === "Open" || p.status === "In Progress" || p.status === "Hiring" || p.status === "Hired"
-    ).length;
-  const completedProjects =
-    profile?.completedProjects ?? projects.filter((p) => p.status === "Completed").length;
-  const totalSpent =
-    profile?.totalSpent ??
-    projects.reduce((acc, curr) => acc + Number(curr.budget || 0), 0);
+  // Display values strictly from backend profile object without client-side calculations
+  const totalProjects = profile?.totalProjects ?? 0;
+  const activeProjects = profile?.activeProjects ?? 0;
+  const completedProjects = profile?.completedProjects ?? 0;
+  const totalHires = profile?.totalHires ?? 0;
+  const ratingDisplay = profile?.averageRating ? `${profile.averageRating.toFixed(1)} / 5` : "N/A";
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Error Alert if API fetch fails */}
+      {profileError && (
+        <div className="glass-card border border-red-500/20 bg-red-500/10 p-4 rounded-2xl flex items-center justify-between gap-4 text-red-200">
+          <div className="flex items-center gap-3">
+            <FiAlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-sm">{profileError}</p>
+          </div>
+          <Button variant="secondary" size="sm" icon={<FiRefreshCw />} onClick={refetchProfile}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="glass-card border border-white/10 p-8 rounded-3xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-bl from-[#6366F1]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -79,7 +81,7 @@ function Dashboard() {
               Welcome back, {profile?.companyName || "Client"}
             </h1>
             <p className="mt-2 text-sm text-gray-400 max-w-xl">
-              Track project milestones, monitor budget spending, and collaborate with top-tier talent from your workspace.
+              Track project milestones, monitor hiring statistics, and collaborate with top-tier talent from your workspace.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -90,8 +92,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Top Statistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      {/* Top Statistic Cards - Strictly fetched from Backend Profile API */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatsCard
           title="Total Projects"
           value={totalProjects}
@@ -102,23 +104,30 @@ function Dashboard() {
         <StatsCard
           title="Active Projects"
           value={activeProjects}
-          subtitle="Currently open or in progress"
+          subtitle="Currently open / hiring"
           icon={<FiActivity className="w-5 h-5" />}
           accent="from-[#3B82F6] to-[#8B5CF6]"
         />
         <StatsCard
           title="Completed Projects"
           value={completedProjects}
-          subtitle="Successfully finalized"
+          subtitle="Finalized & delivered"
           icon={<FiCheckCircle className="w-5 h-5" />}
           accent="from-emerald-500 to-teal-600"
         />
         <StatsCard
-          title="Total Spent"
-          value={`$${totalSpent.toLocaleString()}`}
-          subtitle="Total budget allocated"
-          icon={<FiDollarSign className="w-5 h-5" />}
-          accent="from-purple-500 to-indigo-600"
+          title="Freelancers Hired"
+          value={totalHires}
+          subtitle="Total hires made"
+          icon={<FiUsers className="w-5 h-5" />}
+          accent="from-amber-500 to-orange-600"
+        />
+        <StatsCard
+          title="Rating"
+          value={ratingDisplay}
+          subtitle={`${profile?.totalReviews ?? 0} total reviews`}
+          icon={<FiStar className="w-5 h-5" />}
+          accent="from-yellow-400 to-amber-500"
         />
       </div>
 
@@ -141,7 +150,9 @@ function Dashboard() {
               </Link>
             </div>
 
-            {projects.length > 0 ? (
+            {projectsLoading ? (
+              <div className="py-8 text-center text-xs text-gray-400">Loading recent projects...</div>
+            ) : projects.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -170,7 +181,7 @@ function Dashboard() {
                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
                               project.status === "Completed"
                                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                                : project.status === "In Progress"
+                                : project.status === "In Progress" || project.status === "Hired"
                                 ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
                                 : "bg-blue-500/10 border-blue-500/30 text-blue-400"
                             }`}
