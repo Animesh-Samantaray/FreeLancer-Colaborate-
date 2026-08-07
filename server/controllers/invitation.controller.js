@@ -182,12 +182,14 @@ export const getMyInvitations = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const invitations = await Invitation.find({
+    const rawInvitations = await Invitation.find({
       freelancer: userId,
     })
       .populate("project", "title budget deadline status visibility")
       .populate("client", "fullName email avatar role")
       .sort({ createdAt: -1 });
+
+    const invitations = rawInvitations.filter((i) => i.project !== null);
 
     return res.status(200).json({
       success: true,

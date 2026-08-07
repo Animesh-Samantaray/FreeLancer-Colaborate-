@@ -435,8 +435,8 @@ const MilestonesSection = ({ projectId, project }) => {
     totalTasksAll > 0
       ? Math.round((completedTasksAll / totalTasksAll) * 100)
       : totalMilestones > 0
-      ? Math.round((completedMilestones / totalMilestones) * 100)
-      : 0;
+        ? Math.round((completedMilestones / totalMilestones) * 100)
+        : 0;
 
   return (
     <div className="space-y-6">
@@ -633,8 +633,8 @@ const MilestonesSection = ({ projectId, project }) => {
             const displayStatus = isAllTasksCompleted
               ? "Completed"
               : isAnyTaskActive
-              ? "In Progress"
-              : milestone.status || "Pending";
+                ? "In Progress"
+                : milestone.status || "Pending";
 
             const isCompleted = displayStatus === "Completed";
             const isInProgress = displayStatus === "In Progress";
@@ -643,10 +643,10 @@ const MilestonesSection = ({ projectId, project }) => {
               totalTasks > 0
                 ? Math.round((completedTasks / totalTasks) * 100)
                 : isCompleted
-                ? 100
-                : isInProgress
-                ? 50
-                : 0;
+                  ? 100
+                  : isInProgress
+                    ? 50
+                    : 0;
 
             const isUpdating = statusUpdatingId === milestone._id;
             const isExpanded = Boolean(expandedMilestones[milestone._id]);
@@ -680,22 +680,20 @@ const MilestonesSection = ({ projectId, project }) => {
                   {/* Status Badge */}
                   <div className="shrink-0 flex items-center gap-2">
                     <span
-                      className={`text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full border inline-flex items-center gap-1.5 ${
-                        isCompleted
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : isInProgress
+                      className={`text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full border inline-flex items-center gap-1.5 ${isCompleted
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                        : isInProgress
                           ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
                           : "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                      }`}
+                        }`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isCompleted
-                            ? "bg-emerald-400 animate-pulse"
-                            : isInProgress
+                        className={`w-1.5 h-1.5 rounded-full ${isCompleted
+                          ? "bg-emerald-400 animate-pulse"
+                          : isInProgress
                             ? "bg-indigo-400 animate-pulse"
                             : "bg-amber-400"
-                        }`}
+                          }`}
                       />
                       {displayStatus}
                     </span>
@@ -710,10 +708,10 @@ const MilestonesSection = ({ projectId, project }) => {
                     <span className="font-semibold text-white">
                       {milestone.dueDate
                         ? new Date(milestone.dueDate).toLocaleDateString("en-US", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
                         : "No deadline specified"}
                     </span>
                   </div>
@@ -727,13 +725,12 @@ const MilestonesSection = ({ projectId, project }) => {
                     </div>
                     <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/10">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isCompleted
-                            ? "bg-[#22C55E]"
-                            : isInProgress
+                        className={`h-full rounded-full transition-all duration-500 ${isCompleted
+                          ? "bg-[#22C55E]"
+                          : isInProgress
                             ? "bg-[#6366F1]"
                             : "bg-amber-400"
-                        }`}
+                          }`}
                         style={{ width: `${cardProgressPercent}%` }}
                       />
                     </div>
@@ -825,7 +822,7 @@ const MilestonesSection = ({ projectId, project }) => {
                   <div className="flex items-center gap-2 text-xs text-gray-400 italic">
                     <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                     <span>
-                      Milestone status automatically advances from <strong>Pending</strong> → <strong>In Progress</strong> → <strong>Completed</strong> based on task updates.
+                      Milestone status automatically updated
                     </span>
                   </div>
 

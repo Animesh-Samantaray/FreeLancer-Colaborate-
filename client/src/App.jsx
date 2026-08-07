@@ -34,6 +34,9 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProjects from "./pages/admin/Projects";
 import AdminUsers from "./pages/admin/Users";
 
+// Project Chat Page
+import ProjectChatPage from "./pages/ProjectChatPage";
+
 // Shared Placeholder Pages
 import {
   ProjectsPage,
@@ -232,7 +235,8 @@ function App() {
           {/* Shared Sub-pages */}
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/messages" element={<ProjectChatPage />} />
+          <Route path="/messages/:projectId" element={<ProjectChatPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/profile" element={<ProfilePage />} />

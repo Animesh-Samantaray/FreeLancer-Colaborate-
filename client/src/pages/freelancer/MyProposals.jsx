@@ -76,6 +76,8 @@ const MyProposals = () => {
             const project = prop.project || {};
             const client = prop.client || {};
             const isPending = prop.status === "Pending";
+            const isProjectCompleted = project?.status === "Completed";
+            const displayStatus = isProjectCompleted ? "Completed" : prop.status;
 
             return (
               <div
@@ -87,14 +89,16 @@ const MyProposals = () => {
                   <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <span
                       className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${
-                        prop.status === "Accepted"
+                        displayStatus === "Completed"
+                          ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                          : displayStatus === "Accepted"
                           ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : prop.status === "Rejected"
+                          : displayStatus === "Rejected"
                           ? "bg-red-500/10 border-red-500/20 text-red-400"
                           : "bg-amber-500/10 border-amber-500/20 text-amber-400"
                       }`}
                     >
-                      {prop.status}
+                      {displayStatus}
                     </span>
 
                     <span className="text-xs text-gray-400">
