@@ -1,10 +1,46 @@
-import TaskModel from "../models/Task.model.js";
+import Task from "../models/Task.model.js";
 import FreelancerProfileModel from "../models/FreelancerProfile.model.js";
 import ClientProfileModel from "../models/ClientProfile.model.js";
-import ProjectModel from "../models/Project.model.js";
+import Project from "../models/Project.model.js";
 import Milestone from "../models/Milestone.model.js";
 import User from "../models/User.model.js";
 
+
+// Helper to automatically update milestone status based on task progression
+const syncMilestoneStatus = async (milestoneId) => {
+  if (!milestoneId) return;
+  try {
+    const milestone = await Milestone.findById(milestoneId);
+    if (!milestone) return;
+
+    const tasks = await Task.find({
+      _id: { $in: milestone.tasks },
+    });
+
+    let newStatus = "Pending";
+    if (tasks.length > 0) {
+      const allCompleted = tasks.every((t) => t.status === "Completed");
+      const anyInProgress = tasks.some(
+        (t) => t.status === "In Progress" || t.status === "Completed"
+      );
+
+      if (allCompleted) {
+        newStatus = "Completed";
+      } else if (anyInProgress) {
+        newStatus = "In Progress";
+      } else {
+        newStatus = "Pending";
+      }
+    }
+
+    if (milestone.status !== newStatus) {
+      milestone.status = newStatus;
+      await milestone.save();
+    }
+  } catch (err) {
+    console.error("Sync Milestone Status Error:", err);
+  }
+};
 
 export const createTask = async (req, res) => {
   try {
@@ -89,6 +125,8 @@ export const createTask = async (req, res) => {
     milestone.tasks.push(task._id);
     await milestone.save();
 
+    await syncMilestoneStatus(milestoneId);
+
     return res.status(201).json({
       success: true,
       message: "Task created successfully.",
@@ -143,7 +181,7 @@ export const getMilestoneTasks = async (req, res) => {
 
 export const getTaskById = async (req, res) => {
   try {
-    const { taskId } = req.params;
+    const taskId = req.params.id || req.params.taskId;
 
     const task = await Task.findById(taskId)
       .populate("project", "title")
@@ -243,6 +281,8 @@ export const updateTaskStatus = async (req, res) => {
     task.status = status;
     await task.save();
 
+    await syncMilestoneStatus(task.milestone);
+
     return res.status(200).json({
       success: true,
       message: "Task status updated successfully.",
@@ -273,9 +313,10 @@ export const deleteTask = async (req, res) => {
       });
     }
 
-    
+    const milestoneId = task.milestone;
+
     await Milestone.findByIdAndUpdate(
-      task.milestone,
+      milestoneId,
       {
         $pull: {
           tasks: task._id,
@@ -284,6 +325,8 @@ export const deleteTask = async (req, res) => {
     );
 
     await Task.findByIdAndDelete(id);
+
+    await syncMilestoneStatus(milestoneId);
 
     return res.status(200).json({
       success: true,

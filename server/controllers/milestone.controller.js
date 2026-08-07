@@ -1,5 +1,7 @@
 import Milestone from "../models/Milestone.model.js";
 import Project from "../models/Project.model.js";
+import Proposal from "../models/Proposal.model.js";
+import Invitation from "../models/Invitation.model.js";
 
 export const createMilestone = async (req, res) => {
   try {
@@ -85,13 +87,32 @@ export const getProjectMilestones = async (req, res) => {
       });
     }
 
-    // Only project owner, assigned freelancer, or admin can view milestones
+    // Project owner, assigned/hired freelancer, public project viewers, or admin can view milestones
     const isClient = project.client.toString() === userId;
     const isFreelancer = project.freelancers.some(
       (id) => id.toString() === userId
     );
 
-    if (!isClient && !isFreelancer && role !== "admin") {
+    let isHiredFreelancer = false;
+    if (role === "freelancer" && !isFreelancer) {
+      const acceptedProposal = await Proposal.findOne({
+        project: projectId,
+        freelancer: userId,
+        status: "Accepted",
+      });
+      const acceptedInvitation = await Invitation.findOne({
+        project: projectId,
+        freelancer: userId,
+        status: "Accepted",
+      });
+      if (acceptedProposal || acceptedInvitation) {
+        isHiredFreelancer = true;
+      }
+    }
+
+    const isPublicProject = project.visibility !== "Private";
+
+    if (!isClient && !isFreelancer && !isHiredFreelancer && !isPublicProject && role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
