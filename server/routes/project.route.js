@@ -21,7 +21,7 @@ router.put("/:id", authMiddleware, updateProject);
 
 router.delete("/:id", authMiddleware, deleteProject);
 
-// Optional (Admin only)
+//  (Admin only)
 router.delete("/", authMiddleware, deleteAllProjects);
 
 export default router;

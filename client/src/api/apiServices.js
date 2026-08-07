@@ -107,3 +107,42 @@ export const deleteMilestoneApi = async (id) => {
   const response = await api.delete(`/milestone/${id}`);
   return response.data;
 };
+/* ==========================================================================
+   TASK API SERVICES
+   ========================================================================== */
+
+// Create a new task (Client / Admin)
+export const createTaskApi = async (data) => {
+  const response = await api.post("/task", data);
+  return response.data;
+};
+
+// Get all tasks for a milestone
+export const getMilestoneTasksApi = async (milestoneId) => {
+  const response = await api.get(`/task/milestone/${milestoneId}`);
+  return response.data;
+};
+
+// Get single task details by ID
+export const getTaskByIdApi = async (id) => {
+  const response = await api.get(`/task/${id}`);
+  return response.data;
+};
+
+// Update task details (Client / Admin)
+export const updateTaskApi = async (id, data) => {
+  const response = await api.put(`/task/${id}`, data);
+  return response.data;
+};
+
+// Update task status (Pending, In Progress, Completed) (Freelancer / Admin)
+export const updateTaskStatusApi = async (id, status) => {
+  const response = await api.patch(`/task/${id}/status`, { status });
+  return response.data;
+};
+
+// Delete a task (Client / Admin)
+export const deleteTaskApi = async (id) => {
+  const response = await api.delete(`/task/${id}`);
+  return response.data;
+};

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const milestoneSchema = new mongoose.Schema(
+const taskSchema = new mongoose.Schema(
   {
     project: {
       type: mongoose.Schema.Types.ObjectId,
@@ -8,14 +8,22 @@ const milestoneSchema = new mongoose.Schema(
       required: true,
     },
 
+    milestone: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Milestone",
+      required: true,
+    },
+
     client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
 
     freelancer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
 
     title: {
@@ -26,29 +34,20 @@ const milestoneSchema = new mongoose.Schema(
 
     description: {
       type: String,
-      trim: true,
       default: "",
+      trim: true,
     },
 
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
+    priority: {
+      type: String,
+      enum: ["Low", "Medium", "High"],
+      default: "Medium",
     },
 
     dueDate: {
       type: Date,
       required: true,
     },
-    tasks: {
-  type: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Task",
-    },
-  ],
-  default: [],
-},
 
     status: {
       type: String,
@@ -61,6 +60,4 @@ const milestoneSchema = new mongoose.Schema(
   }
 );
 
-const Milestone = mongoose.model("Milestone", milestoneSchema);
-
-export default Milestone;
+export default mongoose.model("Task", taskSchema);

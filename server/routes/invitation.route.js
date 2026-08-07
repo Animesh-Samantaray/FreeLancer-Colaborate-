@@ -12,9 +12,7 @@ import {
 
 const router = express.Router();
 
-/* ===========================
-   Client Routes
-=========================== */
+
 
 // Send invitation to a freelancer
 router.post(
@@ -40,9 +38,7 @@ router.delete(
   deleteInvitation
 );
 
-/* ===========================
-   Freelancer Routes
-=========================== */
+
 
 // View my invitations
 router.get(
