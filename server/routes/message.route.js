@@ -33,6 +33,13 @@ router.patch(
   markMessageAsRead
 );
 
+router.patch(
+  "/read/:messageId",
+  authMiddleware,
+  authorizeRoles("client", "freelancer", "admin"),
+  markMessageAsRead
+);
+
 router.delete(
   "/:messageId",
   authMiddleware,

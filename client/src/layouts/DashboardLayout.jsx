@@ -12,6 +12,7 @@ import {
   FiFileText,
   FiMail,
   FiCheckSquare,
+  FiMessageSquare,
 } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
@@ -33,6 +34,7 @@ function DashboardLayout() {
           { path: "/client", label: "Dashboard", icon: FiGrid },
           { path: "/client/profile", label: "My Profile", icon: FiUser },
           { path: "/client/my-projects", label: "My Projects", icon: FiFolder },
+          { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "Tasks", icon: FiCheckSquare },
           { path: "/client/freelancers", label: "Browse Freelancers", icon: FiUsers },
           { path: "/settings", label: "Settings", icon: FiSettings },
@@ -41,6 +43,7 @@ function DashboardLayout() {
       ? [
           { path: "/freelancer", label: "Dashboard", icon: FiGrid },
           { path: "/freelancer/profile", label: "My Profile", icon: FiUser },
+          { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "My Tasks", icon: FiCheckSquare },
           { path: "/freelancer/browse-projects", label: "Browse Projects", icon: FiSearch },
           { path: "/freelancer/my-proposals", label: "My Proposals", icon: FiFileText },
@@ -51,6 +54,7 @@ function DashboardLayout() {
       : [
           { path: "/admin", label: "Dashboard", icon: FiGrid },
           { path: "/admin/projects", label: "Projects", icon: FiFolder },
+          { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "All Tasks", icon: FiCheckSquare },
           { path: "/admin/users", label: "Users", icon: FiUsers },
           { path: "/settings", label: "Settings", icon: FiSettings },

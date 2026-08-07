@@ -112,10 +112,12 @@ export const getMyProposals = async (req, res) => {
       ? { $or: [{ freelancer: userId }, { freelancer: freelancerProfile._id }] }
       : { freelancer: userId };
 
-    const proposals = await Proposal.find(filter)
+    const rawProposals = await Proposal.find(filter)
       .populate("project")
       .populate("client", "fullName email avatar role")
       .sort({ createdAt: -1 });
+
+    const proposals = rawProposals.filter((p) => p.project !== null);
 
     return res.status(200).json({
       success: true,

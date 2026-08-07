@@ -146,3 +146,53 @@ export const deleteTaskApi = async (id) => {
   const response = await api.delete(`/task/${id}`);
   return response.data;
 };
+
+/* ==========================================================================
+   CONVERSATION API SERVICES
+   ========================================================================== */
+
+// Get all conversations for current user
+export const getMyConversationsApi = async () => {
+  const response = await api.get("/conversation");
+  return response.data;
+};
+
+// Create a conversation for a project (Client / Admin)
+export const createConversationApi = async (projectId) => {
+  const response = await api.post(`/conversation/project/${projectId}`);
+  return response.data;
+};
+
+// Get conversation for a specific project
+export const getProjectConversationApi = async (projectId) => {
+  const response = await api.get(`/conversation/project/${projectId}`);
+  return response.data;
+};
+
+/* ==========================================================================
+   MESSAGE API SERVICES
+   ========================================================================== */
+
+// Send a message in a conversation
+export const sendMessageApi = async (conversationId, message) => {
+  const response = await api.post(`/message/${conversationId}`, { message });
+  return response.data;
+};
+
+// Get all messages in a conversation
+export const getConversationMessagesApi = async (conversationId) => {
+  const response = await api.get(`/message/${conversationId}`);
+  return response.data;
+};
+
+// Mark a message as read
+export const markMessageReadApi = async (messageId) => {
+  const response = await api.patch(`/message/read/${messageId}`);
+  return response.data;
+};
+
+// Delete a message (Sender / Admin)
+export const deleteMessageApi = async (messageId) => {
+  const response = await api.delete(`/message/${messageId}`);
+  return response.data;
+};

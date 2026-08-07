@@ -34,7 +34,7 @@ const BrowseProjects = () => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/project");
+        const response = await api.get("/project?type=browse");
         setProjects(response.data.projects || []);
       } catch (err) {
         setError(err?.response?.data?.message || "Failed to load projects.");
@@ -86,6 +86,7 @@ const BrowseProjects = () => {
   };
 
   const filteredProjects = projects.filter((project) => {
+    if (project.visibility === "Private") return false;
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     const titleMatch = project.title?.toLowerCase().includes(query);

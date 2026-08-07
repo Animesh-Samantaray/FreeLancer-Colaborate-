@@ -40,8 +40,10 @@ export const sendMessage = async (req, res) => {
     const populatedMessage = await Message.findById(newMessage._id)
       .populate("sender", "fullName avatar role");
 
-      const io = getIO();
-        io.to(conversationId).emit("newMessage", populatedMessage);
+    await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+
+    const io = getIO();
+    io.to(conversationId).emit("newMessage", populatedMessage);
 
     return res.status(201).json({
       success: true,
