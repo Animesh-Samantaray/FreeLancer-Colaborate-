@@ -14,14 +14,31 @@ import invitationRoutes from "./routes/invitation.route.js";
 import aiRoutes from './routes/ai.route.js';
 import milestoneRoutes from "./routes/milestone.route.js";
 import taskRoutes from './routes/task.route.js';
+import conversationRoutes from "./routes/conversation.route.js";
+
 import path from "path";
 import { fileURLToPath } from "url";
+import http from "http";
+import { Server } from "socket.io";
+import { initializeSocket } from "./configs/socket.js";
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  },
+});
+
+initializeSocket(io);
 app.use(express.json({ limit: "10mb" }));
 
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
@@ -53,6 +70,7 @@ app.use("/api/invitation", invitationRoutes);
 app.use("/api/ai" ,  aiRoutes);
 app.use("/api/milestone", milestoneRoutes);
 app.use("/api/task", taskRoutes);
+app.use("/api/conversation", conversationRoutes);
 
 
 app.get("/", (req, res) => {
@@ -65,6 +83,8 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server Running On Port ${PORT}`);
+
+
+server.listen(PORT, () => {
+  console.log(`Server Running On Port ${PORT} \n Socket connected`);
 });
