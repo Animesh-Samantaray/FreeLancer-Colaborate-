@@ -10,19 +10,29 @@ import {
   FiCheckSquare,
   FiAlertCircle,
   FiLoader,
+  FiChevronDown,
+  FiChevronUp,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
 import {
   getProjectMilestonesApi,
   createMilestoneApi,
   updateMilestoneApi,
   updateMilestoneStatusApi,
   deleteMilestoneApi,
+  getMilestoneTasksApi,
+  getProjectProposalsApi,
+  updateTaskStatusApi,
+  deleteTaskApi,
 } from "../api/apiServices";
 import Modal from "./Modal";
 import Button from "./Button";
 import ConfirmDialog from "./ConfirmDialog";
+import TasksList from "./TasksList";
+import TaskModal from "./TaskModal";
+import TaskDetailModal from "./TaskDetailModal";
 
 const MilestonesSection = ({ projectId, project }) => {
   const { user, role } = useAuth();
@@ -31,23 +41,44 @@ const MilestonesSection = ({ projectId, project }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Modal states
+  // Milestone Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState(null);
 
-  // Delete confirm state
+  // Milestone Delete confirm state
   const [deletingMilestoneId, setDeletingMilestoneId] = useState(null);
 
-  // Form states
+  // Milestone Form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
 
-  // Individual card action loading state (id -> boolean)
+  // Milestone Status updating ID
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+
+  // --- Task State Management ---
+  const [tasksMap, setTasksMap] = useState({}); // { [milestoneId]: Task[] }
+  const [tasksLoadingMap, setTasksLoadingMap] = useState({}); // { [milestoneId]: boolean }
+  const [tasksErrorMap, setTasksErrorMap] = useState({}); // { [milestoneId]: string }
+  const [expandedMilestones, setExpandedMilestones] = useState({}); // { [milestoneId]: boolean }
+
+  // Task Modals State
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskModalMilestoneId, setTaskModalMilestoneId] = useState(null);
+  const [taskModalEditingTask, setTaskModalEditingTask] = useState(null);
+
+  const [taskDetailModalOpen, setTaskDetailModalOpen] = useState(false);
+  const [taskDetailTaskId, setTaskDetailTaskId] = useState(null);
+
+  const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const [deletingTaskMilestoneId, setDeletingTaskMilestoneId] = useState(null);
+  const [taskStatusUpdatingId, setTaskStatusUpdatingId] = useState(null);
+
+  // Assigned Project Freelancers
+  const [projectFreelancers, setProjectFreelancers] = useState([]);
 
   // Permissions check
   const isClient =
@@ -62,14 +93,109 @@ const MilestonesSection = ({ projectId, project }) => {
   const canDelete = isClient || isAdmin;
   const canChangeStatus = isFreelancer || isAdmin;
 
-  // Fetch milestones
+  // Task Permissions
+  const canCreateTask = isClient || isAdmin;
+  const canEditTask = isClient || isAdmin;
+  const canDeleteTask = isClient || isAdmin;
+  const canChangeTaskStatus = isFreelancer || isAdmin;
+
+  // Fetch project freelancers for assigned dropdown
+  const fetchProjectFreelancers = async () => {
+    try {
+      const list = [];
+      // 1. If project object has freelancers array
+      if (project?.freelancers && Array.isArray(project.freelancers)) {
+        project.freelancers.forEach((f) => {
+          if (f) list.push(f);
+        });
+      }
+
+      // 2. Fetch project proposals to get freelancers with accepted/submitted proposals (Client/Admin only)
+      if (projectId && (isClient || isAdmin)) {
+        try {
+          const propRes = await getProjectProposalsApi(projectId);
+          if (propRes?.proposals) {
+            propRes.proposals.forEach((p) => {
+              if (p?.freelancer) {
+                const fId =
+                  typeof p.freelancer === "object"
+                    ? p.freelancer._id
+                    : p.freelancer;
+                const exists = list.some((item) => {
+                  const itemId = typeof item === "object" ? item._id : item;
+                  return itemId === fId;
+                });
+                if (!exists) {
+                  list.push(p.freelancer);
+                }
+              }
+            });
+          }
+        } catch (e) {
+          // ignore error if client cannot access proposals or none exist
+        }
+      }
+
+      // 3. Fallback: If still no freelancers, fetch all platform freelancers
+      if (list.length === 0) {
+        try {
+          const freeRes = await api.get("/freelancer");
+          if (freeRes.data?.freelancers) {
+            freeRes.data.freelancers.forEach((pf) => {
+              if (pf?.user) {
+                list.push(pf.user);
+              }
+            });
+          }
+        } catch (e) {
+          console.error("Fallback freelancer fetch error:", e);
+        }
+      }
+
+      setProjectFreelancers(list);
+    } catch (err) {
+      console.error("Fetch Project Freelancers Error:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjectFreelancers();
+  }, [projectId, project]);
+
+  // Fetch single milestone tasks
+  const fetchMilestoneTasks = async (milestoneId) => {
+    if (!milestoneId) return;
+    try {
+      setTasksLoadingMap((prev) => ({ ...prev, [milestoneId]: true }));
+      setTasksErrorMap((prev) => ({ ...prev, [milestoneId]: null }));
+      const res = await getMilestoneTasksApi(milestoneId);
+      setTasksMap((prev) => ({
+        ...prev,
+        [milestoneId]: res.tasks || [],
+      }));
+    } catch (err) {
+      console.error("Fetch Tasks Error for milestone", milestoneId, err);
+      const msg = err?.response?.data?.message || "Failed to load tasks.";
+      setTasksErrorMap((prev) => ({ ...prev, [milestoneId]: msg }));
+    } finally {
+      setTasksLoadingMap((prev) => ({ ...prev, [milestoneId]: false }));
+    }
+  };
+
+  // Fetch all milestones
   const fetchMilestones = async () => {
     if (!projectId) return;
     try {
       setLoading(true);
       setError(null);
       const res = await getProjectMilestonesApi(projectId);
-      setMilestones(res.milestones || []);
+      const fetchedMilestones = res.milestones || [];
+      setMilestones(fetchedMilestones);
+
+      // Fetch tasks for each milestone
+      fetchedMilestones.forEach((m) => {
+        fetchMilestoneTasks(m._id);
+      });
     } catch (err) {
       console.error("Fetch Milestones Error:", err);
       const msg =
@@ -84,7 +210,7 @@ const MilestonesSection = ({ projectId, project }) => {
     fetchMilestones();
   }, [projectId]);
 
-  // Open Create Modal
+  // Milestone Handlers
   const handleOpenCreateModal = () => {
     setTitle("");
     setDescription("");
@@ -93,7 +219,6 @@ const MilestonesSection = ({ projectId, project }) => {
     setCreateModalOpen(true);
   };
 
-  // Create Submit
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -128,24 +253,20 @@ const MilestonesSection = ({ projectId, project }) => {
     }
   };
 
-  // Open Edit Modal
   const handleOpenEditModal = (milestone) => {
     setEditingMilestone(milestone);
     setTitle(milestone.title || "");
     setDescription(milestone.description || "");
     setAmount(milestone.amount ? String(milestone.amount) : "");
-    // Format date string for input[type="date"]
     if (milestone.dueDate) {
       const d = new Date(milestone.dueDate);
-      const formattedDate = d.toISOString().split("T")[0];
-      setDueDate(formattedDate);
+      setDueDate(d.toISOString().split("T")[0]);
     } else {
       setDueDate("");
     }
     setEditModalOpen(true);
   };
 
-  // Edit Submit
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingMilestone) return;
@@ -181,7 +302,6 @@ const MilestonesSection = ({ projectId, project }) => {
     }
   };
 
-  // Delete Confirm Action
   const handleDeleteMilestone = async () => {
     if (!deletingMilestoneId) return;
     try {
@@ -197,13 +317,11 @@ const MilestonesSection = ({ projectId, project }) => {
     }
   };
 
-  // Freelancer / Admin Status Update Dropdown Handler
   const handleStatusChange = async (milestoneId, newStatus) => {
     try {
       setStatusUpdatingId(milestoneId);
       const res = await updateMilestoneStatusApi(milestoneId, newStatus);
       toast.success(res.message || "Milestone status updated!");
-      // Optimistic state update & refetch
       setMilestones((prev) =>
         prev.map((m) => (m._id === milestoneId ? { ...m, status: newStatus } : m))
       );
@@ -215,30 +333,170 @@ const MilestonesSection = ({ projectId, project }) => {
     }
   };
 
-  // Calculate Progress Stats
+  // --- Task Action Handlers ---
+  const toggleExpandMilestone = (milestoneId) => {
+    setExpandedMilestones((prev) => {
+      const current = Boolean(prev[milestoneId]);
+      const updated = { ...prev, [milestoneId]: !current };
+      if (!current && !tasksMap[milestoneId]) {
+        fetchMilestoneTasks(milestoneId);
+      }
+      return updated;
+    });
+  };
+
+  const handleOpenAddTaskModal = (milestoneId) => {
+    setTaskModalMilestoneId(milestoneId);
+    setTaskModalEditingTask(null);
+    setTaskModalOpen(true);
+  };
+
+  const handleOpenEditTaskModal = (task) => {
+    setTaskModalMilestoneId(task.milestone);
+    setTaskModalEditingTask(task);
+    setTaskModalOpen(true);
+  };
+
+  const handleViewTask = (taskId) => {
+    setTaskDetailTaskId(taskId);
+    setTaskDetailModalOpen(true);
+  };
+
+  const handleDeleteTaskPrompt = (taskId, milestoneId) => {
+    setDeletingTaskId(taskId);
+    setDeletingTaskMilestoneId(milestoneId);
+  };
+
+  const handleDeleteTaskConfirm = async () => {
+    if (!deletingTaskId) return;
+    try {
+      const res = await deleteTaskApi(deletingTaskId);
+      toast.success(res.message || "Task deleted successfully!");
+      if (deletingTaskMilestoneId) {
+        fetchMilestoneTasks(deletingTaskMilestoneId);
+        fetchMilestones();
+      }
+      setDeletingTaskId(null);
+      setDeletingTaskMilestoneId(null);
+    } catch (err) {
+      console.error("Delete Task Error:", err);
+    }
+  };
+
+  const handleTaskStatusChange = async (taskId, milestoneId, newStatus) => {
+    try {
+      setTaskStatusUpdatingId(taskId);
+      const res = await updateTaskStatusApi(taskId, newStatus);
+      toast.success(res.message || "Task status updated!");
+      // Optimistic update
+      setTasksMap((prev) => ({
+        ...prev,
+        [milestoneId]: (prev[milestoneId] || []).map((t) =>
+          t._id === taskId ? { ...t, status: newStatus } : t
+        ),
+      }));
+      fetchMilestoneTasks(milestoneId);
+      fetchMilestones();
+    } catch (err) {
+      console.error("Task Status Update Error:", err);
+    } finally {
+      setTaskStatusUpdatingId(null);
+    }
+  };
+
+  // Helper to compute derived milestone status from loaded tasks
+  const getDerivedMilestoneStatus = (m) => {
+    const mTasks = tasksMap[m._id] || [];
+    const total = mTasks.length;
+    const completed = mTasks.filter((t) => t.status === "Completed").length;
+    const inProgress = mTasks.filter((t) => t.status === "In Progress").length;
+
+    if (total > 0 && completed === total) return "Completed";
+    if (inProgress > 0 || completed > 0) return "In Progress";
+    return m.status || "Pending";
+  };
+
+  // Progress Calculations across milestones and tasks
   const totalMilestones = milestones.length;
   const completedMilestones = milestones.filter(
-    (m) => m.status === "Completed"
+    (m) => getDerivedMilestoneStatus(m) === "Completed"
   ).length;
-  const inProgressMilestones = milestones.filter(
-    (m) => m.status === "In Progress"
-  ).length;
+
+  let totalTasksAll = 0;
+  let completedTasksAll = 0;
+
+  milestones.forEach((m) => {
+    const mTasks = tasksMap[m._id] || [];
+    totalTasksAll += mTasks.length;
+    completedTasksAll += mTasks.filter((t) => t.status === "Completed").length;
+  });
+
   const progressPercent =
-    totalMilestones > 0
+    totalTasksAll > 0
+      ? Math.round((completedTasksAll / totalTasksAll) * 100)
+      : totalMilestones > 0
       ? Math.round((completedMilestones / totalMilestones) * 100)
       : 0;
 
   return (
     <div className="space-y-6">
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Milestone Confirmation Dialog */}
       <ConfirmDialog
         isOpen={Boolean(deletingMilestoneId)}
         title="Delete Milestone?"
-        message="Are you sure you want to delete this milestone? This action cannot be undone."
-        confirmLabel="Delete"
+        message="Are you sure you want to delete this milestone? All associated tasks will also be removed."
+        confirmLabel="Delete Milestone"
         cancelLabel="Cancel"
         onConfirm={handleDeleteMilestone}
         onCancel={() => setDeletingMilestoneId(null)}
+      />
+
+      {/* Delete Task Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(deletingTaskId)}
+        title="Delete Task?"
+        message="Are you sure you want to delete this task? This action cannot be undone."
+        confirmLabel="Delete Task"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteTaskConfirm}
+        onCancel={() => {
+          setDeletingTaskId(null);
+          setDeletingTaskMilestoneId(null);
+        }}
+      />
+
+      {/* Task Create / Edit Modal */}
+      <TaskModal
+        isOpen={taskModalOpen}
+        onClose={() => {
+          setTaskModalOpen(false);
+          setTaskModalEditingTask(null);
+          setTaskModalMilestoneId(null);
+        }}
+        onSuccess={() => {
+          if (taskModalMilestoneId) {
+            fetchMilestoneTasks(taskModalMilestoneId);
+            fetchMilestones();
+            setExpandedMilestones((prev) => ({
+              ...prev,
+              [taskModalMilestoneId]: true,
+            }));
+          }
+        }}
+        projectId={projectId}
+        milestoneId={taskModalMilestoneId}
+        task={taskModalEditingTask}
+        projectFreelancers={projectFreelancers}
+      />
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        isOpen={taskDetailModalOpen}
+        onClose={() => {
+          setTaskDetailModalOpen(false);
+          setTaskDetailTaskId(null);
+        }}
+        taskId={taskDetailTaskId}
       />
 
       {/* Header Panel */}
@@ -251,7 +509,7 @@ const MilestonesSection = ({ projectId, project }) => {
               </span>
             </div>
             <h2 className="text-2xl font-bold text-white font-display flex items-center gap-2">
-              Milestones
+              Milestones & Tasks
               {totalMilestones > 0 && (
                 <span className="text-xs font-semibold text-gray-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
                   {completedMilestones}/{totalMilestones} Completed
@@ -259,7 +517,7 @@ const MilestonesSection = ({ projectId, project }) => {
               )}
             </h2>
             <p className="mt-1 text-xs text-gray-400 max-w-xl leading-relaxed">
-              Track contract phases, status updates, timelines, and escrow release checkpoints.
+              Track contract phases, milestone tasks, assigned freelancers, and deliverable deadlines.
             </p>
           </div>
 
@@ -355,21 +613,50 @@ const MilestonesSection = ({ projectId, project }) => {
         /* Milestones List */
         <div className="grid gap-5">
           {milestones.map((milestone) => {
-            const isCompleted = milestone.status === "Completed";
-            const isInProgress = milestone.status === "In Progress";
-            const isPending = milestone.status === "Pending" || !milestone.status;
+            // Milestone Tasks & Auto Status Calculation
+            const milestoneTasks = tasksMap[milestone._id] || [];
+            const totalTasks = milestoneTasks.length;
+            const pendingTasks = milestoneTasks.filter(
+              (t) => t.status === "Pending" || !t.status
+            ).length;
+            const inProgressTasks = milestoneTasks.filter(
+              (t) => t.status === "In Progress"
+            ).length;
+            const completedTasks = milestoneTasks.filter(
+              (t) => t.status === "Completed"
+            ).length;
 
-            // Individual Card Progress Bar %
-            const cardProgressPercent = isCompleted ? 100 : isInProgress ? 50 : 0;
+            // Derived milestone status based on tasks
+            const isAllTasksCompleted = totalTasks > 0 && completedTasks === totalTasks;
+            const isAnyTaskActive = inProgressTasks > 0 || completedTasks > 0;
+
+            const displayStatus = isAllTasksCompleted
+              ? "Completed"
+              : isAnyTaskActive
+              ? "In Progress"
+              : milestone.status || "Pending";
+
+            const isCompleted = displayStatus === "Completed";
+            const isInProgress = displayStatus === "In Progress";
+
+            const cardProgressPercent =
+              totalTasks > 0
+                ? Math.round((completedTasks / totalTasks) * 100)
+                : isCompleted
+                ? 100
+                : isInProgress
+                ? 50
+                : 0;
 
             const isUpdating = statusUpdatingId === milestone._id;
+            const isExpanded = Boolean(expandedMilestones[milestone._id]);
 
             return (
               <div
                 key={milestone._id}
                 className="glass-card rounded-3xl border border-white/10 p-6 space-y-5 hover:border-white/20 transition-all duration-300"
               >
-                {/* Milestone Top Row */}
+                {/* Top Row: Title + Status */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -410,12 +697,12 @@ const MilestonesSection = ({ projectId, project }) => {
                             : "bg-amber-400"
                         }`}
                       />
-                      {milestone.status || "Pending"}
+                      {displayStatus}
                     </span>
                   </div>
                 </div>
 
-                {/* Due Date & Progress Bar */}
+                {/* Due Date & Milestone Progress */}
                 <div className="grid gap-4 sm:grid-cols-2 items-center text-xs border-t border-b border-white/5 py-4">
                   <div className="flex items-center gap-2 text-gray-400">
                     <FiCalendar className="w-4 h-4 text-indigo-400" />
@@ -453,47 +740,96 @@ const MilestonesSection = ({ projectId, project }) => {
                   </div>
                 </div>
 
-                {/* Bottom Actions Row */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-1">
-                  {/* Freelancer / Admin Status Dropdown */}
-                  {canChangeStatus ? (
-                    <div className="flex items-center gap-3">
-                      <label className="text-xs text-gray-400 font-semibold shrink-0">
-                        Change Status:
-                      </label>
-                      <div className="relative flex-1 sm:w-48">
-                        <select
-                          disabled={isUpdating}
-                          value={milestone.status || "Pending"}
-                          onChange={(e) =>
-                            handleStatusChange(milestone._id, e.target.value)
-                          }
-                          className="glass-input w-full rounded-2xl border border-white/10 bg-[#09090B] px-3.5 py-2 text-xs font-semibold text-white outline-none focus:border-indigo-500 transition cursor-pointer disabled:opacity-50"
-                        >
-                          <option value="Pending" className="bg-[#09090B] text-amber-400">
-                            Pending
-                          </option>
-                          <option value="In Progress" className="bg-[#09090B] text-indigo-400">
-                            In Progress
-                          </option>
-                          <option value="Completed" className="bg-[#09090B] text-emerald-400">
-                            Completed
-                          </option>
-                        </select>
-                        {isUpdating && (
-                          <FiLoader className="w-3.5 h-3.5 animate-spin text-indigo-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        )}
+                {/* Task Section Card Summary */}
+                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-4 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FiCheckSquare className="text-[#6366F1] w-4 h-4" />
+                      <span className="text-xs font-bold text-white">
+                        Task Section
+                      </span>
+                      {/* Summary Statistics */}
+                      <div className="flex items-center gap-1.5 flex-wrap ml-2">
+                        <span className="text-[10px] font-semibold bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-gray-300">
+                          Total: <strong className="text-white">{totalTasks}</strong>
+                        </span>
+                        <span className="text-[10px] font-semibold bg-gray-500/10 border border-gray-500/20 px-2 py-0.5 rounded-md text-gray-400">
+                          Pending: <strong>{pendingTasks}</strong>
+                        </span>
+                        <span className="text-[10px] font-semibold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md text-blue-400">
+                          In Progress: <strong>{inProgressTasks}</strong>
+                        </span>
+                        <span className="text-[10px] font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md text-emerald-400">
+                          Completed: <strong>{completedTasks}</strong>
+                        </span>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-500 italic">
-                      {isClient
-                        ? "Status updates are managed by assigned freelancers upon task completion."
-                        : ""}
+
+                    {/* Task Buttons */}
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {canCreateTask && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddTaskModal(milestone._id)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/30 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-[#6366F1]/30 transition"
+                        >
+                          <FiPlus className="w-3.5 h-3.5" /> Add Task
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandMilestone(milestone._id)}
+                        className="inline-flex items-center gap-1 rounded-xl bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:bg-white/10 hover:text-white transition"
+                      >
+                        {isExpanded ? (
+                          <>
+                            Hide Tasks <FiChevronUp className="w-3.5 h-3.5" />
+                          </>
+                        ) : (
+                          <>
+                            View Tasks ({totalTasks}){" "}
+                            <FiChevronDown className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tasks List Content (Expandable) */}
+                  {isExpanded && (
+                    <div className="pt-2 border-t border-white/5">
+                      <TasksList
+                        tasks={milestoneTasks}
+                        loading={Boolean(tasksLoadingMap[milestone._id])}
+                        error={tasksErrorMap[milestone._id]}
+                        canEdit={canEditTask}
+                        canDelete={canDeleteTask}
+                        canChangeStatus={canChangeTaskStatus}
+                        onEditTask={handleOpenEditTaskModal}
+                        onDeleteTask={(tId) =>
+                          handleDeleteTaskPrompt(tId, milestone._id)
+                        }
+                        onStatusChange={(tId, newStat) =>
+                          handleTaskStatusChange(tId, milestone._id, newStat)
+                        }
+                        onViewTask={handleViewTask}
+                        statusUpdatingId={taskStatusUpdatingId}
+                      />
                     </div>
                   )}
+                </div>
 
-                  {/* Client / Admin Edit & Delete buttons */}
+                {/* Bottom Actions Row */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-1 border-t border-white/5">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 italic">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                    <span>
+                      Milestone status automatically advances from <strong>Pending</strong> → <strong>In Progress</strong> → <strong>Completed</strong> based on task updates.
+                    </span>
+                  </div>
+
+                  {/* Client / Admin Edit & Delete Milestone Buttons */}
                   {(canEdit || canDelete) && (
                     <div className="flex items-center gap-2 justify-end">
                       {canEdit && (
@@ -501,7 +837,7 @@ const MilestonesSection = ({ projectId, project }) => {
                           onClick={() => handleOpenEditModal(milestone)}
                           className="inline-flex items-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 hover:text-white transition"
                         >
-                          <FiEdit2 className="w-3.5 h-3.5 text-indigo-400" /> Edit
+                          <FiEdit2 className="w-3.5 h-3.5 text-indigo-400" /> Edit Milestone
                         </button>
                       )}
                       {canDelete && (
@@ -509,33 +845,11 @@ const MilestonesSection = ({ projectId, project }) => {
                           onClick={() => setDeletingMilestoneId(milestone._id)}
                           className="inline-flex items-center gap-1.5 rounded-2xl border border-red-500/20 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
                         >
-                          <FiTrash2 className="w-3.5 h-3.5" /> Delete
+                          <FiTrash2 className="w-3.5 h-3.5" /> Delete Milestone
                         </button>
                       )}
                     </div>
                   )}
-                </div>
-
-                {/* Task Placeholder Section for Future Compatibility */}
-                <div className="mt-4 pt-4 border-t border-white/5 bg-white/[0.02] rounded-2xl p-4 border border-white/5 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span className="flex items-center gap-1.5 text-gray-300 font-semibold">
-                      <FiCheckSquare className="text-[#6366F1]" /> Tasks
-                    </span>
-                    <span className="text-[10px] text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      Task module coming soon
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 italic">
-                    Individual deliverables and sub-tasks will be tracked here.
-                  </p>
-                  <button
-                    disabled
-                    type="button"
-                    className="mt-2 text-xs text-gray-500 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 font-medium"
-                  >
-                    <FiPlus className="w-3.5 h-3.5" /> Add Task
-                  </button>
                 </div>
               </div>
             );

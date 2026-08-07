@@ -1,5 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
+import { getMyProposalsApi, getMyInvitationsApi } from "../api/apiServices";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmptyState from "../components/EmptyState";
+import MilestonesSection from "../components/MilestonesSection";
 import {
   FiFolder,
   FiCheckSquare,
@@ -19,6 +24,26 @@ import {
   FiCheckCircle,
   FiAlertCircle
 } from "react-icons/fi";
+
+// Helper to check if freelancer is hired for a project
+const isFreelancerHiredForProject = (project, userId, acceptedProjectIdsSet) => {
+  if (!project) return false;
+  const pId = (project._id || project.id || "").toString();
+
+  // Check 1: In accepted proposals or accepted invitations
+  if (acceptedProjectIdsSet.has(pId)) return true;
+
+  // Check 2: Listed in project.freelancers array
+  if (project.freelancers && Array.isArray(project.freelancers)) {
+    const isListed = project.freelancers.some((f) => {
+      const fId = typeof f === "object" ? (f._id || f.id || "").toString() : (f || "").toString();
+      return fId === userId?.toString();
+    });
+    if (isListed) return true;
+  }
+
+  return false;
+};
 
 // Helper components
 const ComingSoonBadge = () => (
@@ -81,53 +106,140 @@ export function ProjectsPage() {
   );
 }
 
-/* 2. Tasks Placeholder */
+/* 2. Tasks Page Component */
 export function TasksPage() {
-  const columns = ["To Do", "In Progress", "Code Review", "Done"];
-  const mockTasks = [
-    { id: 1, title: "Auth cookie validation logic", col: "To Do", priority: "High" },
-    { id: 2, title: "Vite build pipeline optimization", col: "In Progress", priority: "Medium" },
-    { id: 3, title: "Google OAuth callback routing", col: "Done", priority: "High" }
-  ];
+  const { user, role } = useAuth();
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await api.get("/project");
+        let list = res.data?.projects || [];
+
+        // For Freelancers: filter down strictly to projects where they are HIRED
+        if (role === "freelancer") {
+          const [proposalsRes, invitationsRes] = await Promise.allSettled([
+            getMyProposalsApi(),
+            getMyInvitationsApi(),
+          ]);
+
+          const acceptedProjectIdsSet = new Set();
+
+          if (proposalsRes.status === "fulfilled" && proposalsRes.value?.proposals) {
+            proposalsRes.value.proposals.forEach((p) => {
+              if (p.status === "Accepted" && p.project) {
+                const pId = typeof p.project === "object" ? p.project._id || p.project.id : p.project;
+                if (pId) acceptedProjectIdsSet.add(pId.toString());
+              }
+            });
+          }
+
+          if (invitationsRes.status === "fulfilled" && invitationsRes.value?.invitations) {
+            invitationsRes.value.invitations.forEach((i) => {
+              if (i.status === "Accepted" && i.project) {
+                const pId = typeof i.project === "object" ? i.project._id || i.project.id : i.project;
+                if (pId) acceptedProjectIdsSet.add(pId.toString());
+              }
+            });
+          }
+
+          const currentUserId = user?._id || user?.id;
+
+          list = list.filter((proj) =>
+            isFreelancerHiredForProject(proj, currentUserId, acceptedProjectIdsSet)
+          );
+        }
+
+        // Exclude Completed and Cancelled projects from active task management
+        list = list.filter(
+          (proj) => proj.status !== "Completed" && proj.status !== "Cancelled"
+        );
+
+        setProjects(list);
+        if (list.length > 0) {
+          setSelectedProjectId(list[0]._id);
+        }
+      } catch (err) {
+        console.error("Fetch projects error:", err);
+        setError(err?.response?.data?.message || "Failed to load projects.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [role, user]);
+
+  const selectedProject = projects.find((p) => p._id === selectedProjectId);
+
+  if (loading) {
+    return <LoadingSpinner label="Loading task workspace..." />;
+  }
+
+  if (error) {
+    return <EmptyState title="Could not load tasks" description={error} />;
+  }
+
+  if (projects.length === 0) {
+    return (
+      <EmptyState
+        title={role === "freelancer" ? "No Hired Projects Found" : "No active projects found"}
+        description={
+          role === "freelancer"
+            ? "You have not been hired for any projects yet. Submit proposals or accept invitations to collaborate on tasks."
+            : "Create or accept a project to start managing milestones and tasks."
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header Banner */}
+      <div className="glass-card rounded-3xl border border-white/10 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-display flex items-center gap-2">
-            <FiCheckSquare className="text-[#6366F1]" /> Tasks Kanban
+          <h1 className="text-2xl font-bold font-display flex items-center gap-2 text-white">
+            <FiCheckSquare className="text-[#6366F1]" /> Task Management Tracker
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Milestone checklist and sprint tracker</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {role === "freelancer"
+              ? "View tasks for projects you are hired on and update task status as you complete deliverables."
+              : "Break deliverables into actionable tasks, assign tasks to project freelancers, and track progress."}
+          </p>
         </div>
-        <ComingSoonBadge />
+
+        {/* Project Selector Dropdown */}
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-semibold text-gray-400 shrink-0">
+            Select Project:
+          </label>
+          <select
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            className="glass-input rounded-2xl border border-white/10 bg-[#09090B] px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            {projects.map((proj) => (
+              <option key={proj._id} value={proj._id} className="bg-[#09090B] text-white">
+                {proj.title}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-        {columns.map((col) => (
-          <div key={col} className="glass-card p-4 rounded-2xl border border-white/5 bg-white/[0.01] min-h-[350px]">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 border-b border-white/5 pb-2 flex justify-between items-center">
-              {col}
-              <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
-                {mockTasks.filter((t) => t.col === col).length}
-              </span>
-            </h3>
-            
-            <div className="space-y-3">
-              {mockTasks.filter((t) => t.col === col).map((task) => (
-                <div key={task.id} className="p-4 rounded-xl bg-white/2 border border-white/5 hover:border-white/10 transition cursor-pointer">
-                  <h4 className="text-xs font-medium text-white">{task.title}</h4>
-                  <div className="flex items-center justify-between mt-3 text-[10px] text-gray-500">
-                    <span className={`px-1.5 py-0.5 rounded uppercase font-bold text-[8px] ${
-                      task.priority === "High" ? "text-red-400 bg-red-500/10" : "text-amber-400 bg-amber-400/10"
-                    }`}>{task.priority}</span>
-                    <span>#{task.id}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Render Milestones & Tasks Section for Selected Project */}
+      {selectedProject && (
+        <MilestonesSection
+          projectId={selectedProject._id}
+          project={selectedProject}
+        />
+      )}
     </div>
   );
 }

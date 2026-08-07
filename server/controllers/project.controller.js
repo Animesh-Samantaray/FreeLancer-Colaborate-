@@ -2,6 +2,8 @@ import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
 import ClientProfile from "../models/ClientProfile.model.js";
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
+import Proposal from "../models/Proposal.model.js";
+import Invitation from "../models/Invitation.model.js";
 
 export const updateProjectStatsOnCompletion = async (project, oldStatus) => {
   if (oldStatus !== "Completed" && project.status === "Completed") {
@@ -104,7 +106,28 @@ export const getAllProjects = async (req, res) => {
     if (userRole === "client") {
       query = { client: userId };
     } else if (userRole === "freelancer") {
-      query = { visibility: { $ne: "Private" } };
+      const acceptedProposals = await Proposal.find({
+        freelancer: userId,
+        status: "Accepted",
+      }).select("project");
+
+      const acceptedInvitations = await Invitation.find({
+        freelancer: userId,
+        status: "Accepted",
+      }).select("project");
+
+      const acceptedProjectIds = [
+        ...acceptedProposals.map((p) => p.project),
+        ...acceptedInvitations.map((i) => i.project),
+      ];
+
+      query = {
+        $or: [
+          { visibility: { $ne: "Private" } },
+          { freelancers: userId },
+          { _id: { $in: acceptedProjectIds } },
+        ],
+      };
     } else if (userRole === "admin") {
       query = {};
     }
