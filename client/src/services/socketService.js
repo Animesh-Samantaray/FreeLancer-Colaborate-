@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
 
 let socket = null;
+let currentConversationId = null;
 
 const getSocketUrl = () => {
   if (import.meta.env.VITE_SOCKET_URL) {
@@ -25,6 +26,10 @@ export const initSocket = () => {
 
     socket.on("connect", () => {
       console.log("⚡ Socket connected:", socket.id);
+      if (currentConversationId) {
+        socket.emit("joinConversation", currentConversationId);
+        console.log(`⚡ Re-joined conversation room: ${currentConversationId}`);
+      }
     });
 
     socket.on("connect_error", (err) => {
@@ -50,22 +55,23 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
+  currentConversationId = null;
 };
 
 export const joinConversationRoom = (conversationId) => {
   if (!conversationId) return;
+  currentConversationId = conversationId;
   const s = getSocket();
   if (s && s.connected) {
     s.emit("joinConversation", conversationId);
-  } else if (s) {
-    s.once("connect", () => {
-      s.emit("joinConversation", conversationId);
-    });
   }
 };
 
 export const leaveConversationRoom = (conversationId) => {
   if (!conversationId) return;
+  if (currentConversationId === conversationId) {
+    currentConversationId = null;
+  }
   if (socket && socket.connected) {
     socket.emit("leaveConversation", conversationId);
   }

@@ -185,6 +185,8 @@ const ProjectChatPage = () => {
 
   // Socket event listeners: newMessage
   useEffect(() => {
+    const activeConvId = selectedConversation?._id;
+
     const unsubscribe = subscribeToNewMessage((newMsg) => {
       const convId = typeof newMsg.conversation === "object" ? newMsg.conversation._id : newMsg.conversation;
 
@@ -192,32 +194,29 @@ const ProjectChatPage = () => {
       setLastMessagesMap((prev) => ({ ...prev, [convId]: newMsg }));
 
       // If this message belongs to active conversation, append to list
-      setSelectedConversation((currentConv) => {
-        if (currentConv && currentConv._id === convId) {
-          setMessages((prev) => {
-            // Avoid duplicate message
-            if (prev.some((m) => m._id === newMsg._id)) return prev;
-            return [...prev, newMsg];
-          });
+      if (activeConvId && activeConvId === convId) {
+        setMessages((prev) => {
+          // Avoid duplicate message
+          if (prev.some((m) => m._id === newMsg._id)) return prev;
+          return [...prev, newMsg];
+        });
 
-          // Mark read automatically if message is incoming
-          const senderId = typeof newMsg.sender === "object" ? newMsg.sender?._id || newMsg.sender?.id : newMsg.sender;
-          if (senderId?.toString() !== currentUserId?.toString()) {
-            markMessageReadApi(newMsg._id).catch(() => {});
-          }
-        } else {
-          // Increment unread count for inactive conversation
-          setUnreadsMap((prev) => ({
-            ...prev,
-            [convId]: (prev[convId] || 0) + 1,
-          }));
+        // Mark read automatically if message is incoming
+        const senderId = typeof newMsg.sender === "object" ? newMsg.sender?._id || newMsg.sender?.id : newMsg.sender;
+        if (senderId?.toString() !== currentUserId?.toString()) {
+          markMessageReadApi(newMsg._id).catch(() => {});
         }
-        return currentConv;
-      });
+      } else {
+        // Increment unread count for inactive conversation
+        setUnreadsMap((prev) => ({
+          ...prev,
+          [convId]: (prev[convId] || 0) + 1,
+        }));
+      }
     });
 
     return unsubscribe;
-  }, [currentUserId]);
+  }, [selectedConversation?._id, currentUserId]);
 
   // Socket event listeners: messageDeleted
   useEffect(() => {
