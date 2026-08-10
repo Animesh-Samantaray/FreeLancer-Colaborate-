@@ -1,24 +1,35 @@
 import React, { useEffect, useRef } from "react";
-import { FiCheck, FiCheckCircle, FiTrash2, FiClock, FiShield, FiSmile } from "react-icons/fi";
+import {
+  FiCheck,
+  FiCheckCircle,
+  FiTrash2,
+  FiClock,
+  FiShield,
+  FiSmile,
+  FiFileText,
+  FiFilm,
+  FiDownload,
+  FiExternalLink,
+  FiEye,
+  FiPaperclip,
+} from "react-icons/fi";
 
-// Formats message timestamp: e.g., "10:42 AM"
 const formatMessageTime = (dateStr) => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-// Formats date separators: e.g., "Today", "Yesterday", "Monday, August 5, 2026"
 const formatDateSeparator = (dateStr) => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   const now = new Date();
-  
+
   const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   const diffDays = Math.round((nowDate - dDate) / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) {
@@ -27,7 +38,14 @@ const formatDateSeparator = (dateStr) => {
   return d.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
 };
 
-// Role badge styling
+const formatFileSize = (bytes) => {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
+
 const getRoleBadge = (role) => {
   const r = (role || "freelancer").toLowerCase();
   if (r === "client") return "bg-purple-500/10 text-purple-400 border-purple-500/20";
@@ -40,13 +58,13 @@ const MessageList = ({
   currentUserId,
   userRole,
   onDeleteMessage,
+  onViewAttachment,
   loading = false,
   participants = [],
 }) => {
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
-  // Auto-scroll to bottom when messages list updates
   const scrollToBottom = (behavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
@@ -87,13 +105,12 @@ const MessageList = ({
         </div>
         <h3 className="text-base font-bold text-white font-display">Start the Project Conversation</h3>
         <p className="text-xs text-gray-400 mt-1 max-w-sm">
-          Send a message below to collaborate in real-time with team members and project stakeholders.
+          Send a message or share files below to collaborate in real-time with team members.
         </p>
       </div>
     );
   }
 
-  // Process messages into date groups and sender clusters
   let lastDateStr = null;
 
   return (
@@ -111,39 +128,39 @@ const MessageList = ({
         const senderId = typeof msg.sender === "object" ? msg.sender?._id || msg.sender?.id : msg.sender;
         const isOutgoing = senderId?.toString() === currentUserId?.toString();
 
-        // Sender details
         const senderObj =
           typeof msg.sender === "object"
             ? msg.sender
             : participants.find((p) => (p._id || p.id)?.toString() === senderId?.toString()) || {};
-        
+
         const senderName = senderObj.fullName || "User";
         const senderRole = senderObj.role || "Member";
         const senderAvatar = senderObj.avatar;
 
-        // Group consecutive messages from same sender within 5 mins
         const prevMsg = messages[index - 1];
         const prevSenderId = prevMsg
           ? typeof prevMsg.sender === "object"
             ? prevMsg.sender?._id || prevMsg.sender?.id
             : prevMsg.sender
           : null;
-        
+
         const timeDiffMins = prevMsg
           ? (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / (1000 * 60)
           : 999;
-          
+
         const isConsecutive = prevSenderId?.toString() === senderId?.toString() && timeDiffMins < 5 && !showDateSeparator;
 
-        // Check if can delete (own message or admin)
         const canDelete = isOutgoing || userRole === "admin";
-
-        // Read status check: read if readBy has other participants
         const isReadByOthers = Array.isArray(msg.readBy) && msg.readBy.some((id) => id?.toString() !== currentUserId?.toString());
+
+        const attachment = msg.attachment;
+        const mime = attachment?.mimeType || "";
+        const isImage = mime.startsWith("image/");
+        const isVideo = mime.startsWith("video/");
+        const isPdf = mime === "application/pdf";
 
         return (
           <React.Fragment key={msg._id || index}>
-            {/* Date Separator */}
             {showDateSeparator && (
               <div className="flex items-center justify-center my-4">
                 <span className="px-3 py-1 rounded-full bg-[#1E293B]/80 border border-white/10 text-[10px] font-semibold text-gray-400 shadow-sm backdrop-blur-md">
@@ -152,13 +169,12 @@ const MessageList = ({
               </div>
             )}
 
-            {/* Message Row */}
             <div
+              id={`msg-${msg._id}`}
               className={`group flex items-end gap-2.5 ${
                 isOutgoing ? "justify-end" : "justify-start"
               } ${isConsecutive ? "mt-1" : "mt-3"}`}
             >
-              {/* Incoming Avatar (Only show on first message of consecutive cluster) */}
               {!isOutgoing && (
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-500 text-xs font-bold text-white flex items-center justify-center uppercase shrink-0 shadow-sm">
                   {!isConsecutive && (
@@ -175,9 +191,7 @@ const MessageList = ({
                 </div>
               )}
 
-              {/* Message Bubble container */}
               <div className={`flex flex-col max-w-[85%] sm:max-w-[70%] ${isOutgoing ? "items-end" : "items-start"}`}>
-                {/* Sender Name & Role Pill (if not consecutive and incoming) */}
                 {!isOutgoing && !isConsecutive && (
                   <div className="flex items-center gap-1.5 mb-1 px-1">
                     <span className="text-xs font-semibold text-gray-300">{senderName}</span>
@@ -188,7 +202,6 @@ const MessageList = ({
                 )}
 
                 <div className="relative group/bubble flex items-center gap-2">
-                  {/* Delete button action on hover */}
                   {canDelete && (
                     <button
                       onClick={() => onDeleteMessage && onDeleteMessage(msg._id)}
@@ -201,17 +214,77 @@ const MessageList = ({
                     </button>
                   )}
 
-                  {/* Message Bubble */}
                   <div
-                    className={`px-4 py-2.5 text-xs leading-relaxed break-words rounded-2xl shadow-md transition ${
+                    className={`p-3 text-xs leading-relaxed break-words rounded-2xl shadow-md transition ${
                       isOutgoing
                         ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-xs border border-indigo-500/30 shadow-indigo-600/10"
                         : "bg-[#1E293B]/90 text-gray-100 rounded-bl-xs border border-white/10 backdrop-blur-md"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap font-sans">{msg.message}</p>
+                    {attachment && attachment.url && (
+                      <div className="mb-2">
+                        {isImage && (
+                          <div
+                            onClick={() => onViewAttachment && onViewAttachment(attachment, senderName, msg.createdAt)}
+                            className="relative rounded-xl overflow-hidden cursor-pointer max-w-sm max-h-72 border border-white/10 group/img shadow-md bg-black/30"
+                          >
+                            <img
+                              src={attachment.url}
+                              alt={attachment.originalName || "Attached Image"}
+                              className="max-h-72 w-full object-cover transition duration-300 group-hover/img:scale-105"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center text-white gap-1.5 font-semibold text-xs">
+                              <FiEye className="w-4 h-4" />
+                              <span>View Fullscreen</span>
+                            </div>
+                          </div>
+                        )}
 
-                    {/* Bottom Metadata: Time & Read Ticks */}
+                        {isVideo && (
+                          <div className="relative rounded-xl overflow-hidden max-w-sm border border-white/10 shadow-md bg-black/40">
+                            <video
+                              src={attachment.url}
+                              controls
+                              preload="metadata"
+                              className="max-h-64 w-full rounded-xl"
+                            />
+                          </div>
+                        )}
+
+                        {!isImage && !isVideo && (
+                          <div className="p-3 rounded-xl bg-black/30 border border-white/10 flex items-center gap-3 max-w-sm">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg shrink-0 border border-indigo-500/30">
+                              {isPdf ? <FiFileText /> : <FiPaperclip />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-white truncate">
+                                {attachment.originalName || "Document"}
+                              </p>
+                              <p className="text-[10px] text-gray-300 mt-0.5">
+                                {formatFileSize(attachment.size)}
+                              </p>
+                            </div>
+                            <a
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={attachment.originalName || true}
+                              className="p-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 transition text-xs font-medium shrink-0 flex items-center gap-1 cursor-pointer"
+                              title="Open or download file"
+                            >
+                              <FiExternalLink className="w-3.5 h-3.5" />
+                              <span className="hidden xs:inline">Open</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {msg.message && (
+                      <p className="whitespace-pre-wrap font-sans">{msg.message}</p>
+                    )}
+
                     <div
                       className={`flex items-center gap-1 mt-1 text-[9px] ${
                         isOutgoing ? "text-indigo-200 justify-end" : "text-gray-400 justify-start"

@@ -23,6 +23,8 @@ import ConversationList from "../components/chat/ConversationList";
 import ChatHeader from "../components/chat/ChatHeader";
 import MessageList from "../components/chat/MessageList";
 import MessageComposer from "../components/chat/MessageComposer";
+import MediaGallery from "../components/chat/MediaGallery";
+import FilePreviewModal from "../components/chat/FilePreviewModal";
 import EmptyState from "../components/EmptyState";
 import { toast } from "react-hot-toast";
 import { FiMessageSquare } from "react-icons/fi";
@@ -43,14 +45,15 @@ const ProjectChatPage = () => {
   const [lastMessagesMap, setLastMessagesMap] = useState({});
   const [unreadsMap, setUnreadsMap] = useState({});
 
-  // Initialize Socket connection
+  const [activeTab, setActiveTab] = useState("chat");
+  const [activePreview, setActivePreview] = useState(null);
+
   useEffect(() => {
     if (currentUserId) {
       initSocket();
     }
   }, [currentUserId]);
 
-  // Fetch conversations on load
   const fetchConversations = useCallback(async () => {
     try {
       setLoadingConversations(true);
@@ -58,7 +61,6 @@ const ProjectChatPage = () => {
       const list = res.conversations || [];
       setConversations(list);
 
-      // Populate initial lastMessages and unreads
       const lastMap = {};
       const unreads = {};
       list.forEach((c) => {
@@ -83,27 +85,23 @@ const ProjectChatPage = () => {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Handle URL projectId parameter or select first conversation by default
   useEffect(() => {
     if (loadingConversations) return;
 
     const selectTargetConversation = async () => {
       if (projectId) {
-        // Find in existing list
         let found = conversations.find(
           (c) => (c.project?._id || c.project) === projectId
         );
 
         if (!found) {
           try {
-            // Try fetching from project API
             const res = await getProjectConversationApi(projectId);
             if (res.conversation) {
               found = res.conversation;
               setConversations((prev) => [found, ...prev]);
             }
           } catch (err) {
-            // If conversation doesn't exist yet and user is client or admin, try creating
             if (role === "client" || role === "admin") {
               try {
                 const createRes = await createConversationApi(projectId);
@@ -123,7 +121,6 @@ const ProjectChatPage = () => {
           setSelectedConversation(found);
         }
       } else if (conversations.length > 0 && !selectedConversation) {
-        // Select first conversation by default on desktop
         if (window.innerWidth >= 768) {
           setSelectedConversation(conversations[0]);
         }
@@ -133,20 +130,18 @@ const ProjectChatPage = () => {
     selectTargetConversation();
   }, [projectId, conversations, loadingConversations, role]);
 
-  // Fetch messages and manage socket room whenever selected conversation changes
   useEffect(() => {
     if (!selectedConversation) {
       setMessages([]);
+      setActiveTab("chat");
       return;
     }
 
     const conversationId = selectedConversation._id;
 
-    // Join Socket room
     joinConversationRoom(conversationId);
     setActiveConversationId(conversationId);
 
-    // Fetch messages
     const fetchMessages = async () => {
       try {
         setLoadingMessages(true);
@@ -154,13 +149,11 @@ const ProjectChatPage = () => {
         const fetchedMessages = res.messages || [];
         setMessages(fetchedMessages);
 
-        // Update last message map
         if (fetchedMessages.length > 0) {
           const lastMsg = fetchedMessages[fetchedMessages.length - 1];
           setLastMessagesMap((prev) => ({ ...prev, [conversationId]: lastMsg }));
         }
 
-        // Mark unread messages as read
         fetchedMessages.forEach((msg) => {
           const readArray = msg.readBy || [];
           if (!readArray.includes(currentUserId)) {
@@ -168,7 +161,6 @@ const ProjectChatPage = () => {
           }
         });
 
-        // Reset unread count for selected conversation
         setUnreadsMap((prev) => ({ ...prev, [conversationId]: 0 }));
 
       } catch (err) {
@@ -180,38 +172,31 @@ const ProjectChatPage = () => {
 
     fetchMessages();
 
-    // Clean up socket room on unmount or switch
     return () => {
       leaveConversationRoom(conversationId);
       setActiveConversationId(null);
     };
   }, [selectedConversation, currentUserId, setActiveConversationId]);
 
-  // Socket event listeners: newMessage
   useEffect(() => {
     const activeConvId = selectedConversation?._id;
 
     const unsubscribe = subscribeToNewMessage((newMsg) => {
       const convId = typeof newMsg.conversation === "object" ? newMsg.conversation._id : newMsg.conversation;
 
-      // Update last message map for sidebar preview
       setLastMessagesMap((prev) => ({ ...prev, [convId]: newMsg }));
 
-      // If this message belongs to active conversation, append to list
       if (activeConvId && activeConvId === convId) {
         setMessages((prev) => {
-          // Avoid duplicate message
           if (prev.some((m) => m._id === newMsg._id)) return prev;
           return [...prev, newMsg];
         });
 
-        // Mark read automatically if message is incoming
         const senderId = typeof newMsg.sender === "object" ? newMsg.sender?._id || newMsg.sender?.id : newMsg.sender;
         if (senderId?.toString() !== currentUserId?.toString()) {
           markMessageReadApi(newMsg._id).catch(() => {});
         }
       } else {
-        // Increment unread count for inactive conversation
         setUnreadsMap((prev) => ({
           ...prev,
           [convId]: (prev[convId] || 0) + 1,
@@ -222,7 +207,6 @@ const ProjectChatPage = () => {
     return unsubscribe;
   }, [selectedConversation?._id, currentUserId]);
 
-  // Socket event listeners: messageDeleted
   useEffect(() => {
     const unsubscribe = subscribeToMessageDeleted(({ messageId }) => {
       setMessages((prev) => prev.filter((m) => m._id !== messageId));
@@ -230,7 +214,6 @@ const ProjectChatPage = () => {
     return unsubscribe;
   }, []);
 
-  // Socket event listeners: messageRead
   useEffect(() => {
     const unsubscribe = subscribeToMessageRead(({ messageId, userId }) => {
       setMessages((prev) =>
@@ -248,21 +231,38 @@ const ProjectChatPage = () => {
     return unsubscribe;
   }, []);
 
-  // Handle selecting a conversation
   const handleSelectConversation = (conv) => {
     setSelectedConversation(conv);
+    setActiveTab("chat");
     if (conv.project?._id) {
       navigate(`/messages/${conv.project._id}`);
     }
   };
 
-  // Handle sending a new message
-  const handleSendMessage = async (text) => {
-    if (!selectedConversation || !text.trim() || sending) return;
+  const handleSendMessage = async (text, file, onProgress) => {
+    if (!selectedConversation || sending) return;
 
     try {
       setSending(true);
-      const res = await sendMessageApi(selectedConversation._id, text);
+      let payload;
+
+      if (file) {
+        payload = new FormData();
+        payload.append("file", file);
+        if (text && text.trim()) {
+          payload.append("message", text.trim());
+        }
+      } else {
+        payload = text;
+      }
+
+      const res = await sendMessageApi(selectedConversation._id, payload, (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      });
+
       if (res.success && res.data) {
         const sentMsg = res.data;
         setMessages((prev) => {
@@ -276,13 +276,13 @@ const ProjectChatPage = () => {
       }
     } catch (err) {
       console.error("Send message error:", err);
-      toast.error("Failed to send message.");
+      toast.error(err.response?.data?.message || "Failed to send message.");
+      throw err;
     } finally {
       setSending(false);
     }
   };
 
-  // Handle deleting a message
   const handleDeleteMessage = async (messageId) => {
     try {
       await deleteMessageApi(messageId);
@@ -294,9 +294,79 @@ const ProjectChatPage = () => {
     }
   };
 
+  const handleOpenPreview = (attachment, senderName, createdAt, index = 0, list = []) => {
+    setActivePreview({
+      attachment,
+      senderName,
+      createdAt,
+      index,
+      list,
+    });
+  };
+
+  const handleNextPreview = () => {
+    if (!activePreview || !activePreview.list || activePreview.list.length === 0) return;
+    const nextIdx = activePreview.index + 1;
+    if (nextIdx < activePreview.list.length) {
+      const item = activePreview.list[nextIdx];
+      setActivePreview({
+        ...activePreview,
+        attachment: item.attachment,
+        senderName: item.senderName,
+        createdAt: item.createdAt,
+        index: nextIdx,
+      });
+    }
+  };
+
+  const handlePrevPreview = () => {
+    if (!activePreview || !activePreview.list || activePreview.list.length === 0) return;
+    const prevIdx = activePreview.index - 1;
+    if (prevIdx >= 0) {
+      const item = activePreview.list[prevIdx];
+      setActivePreview({
+        ...activePreview,
+        attachment: item.attachment,
+        senderName: item.senderName,
+        createdAt: item.createdAt,
+        index: prevIdx,
+      });
+    }
+  };
+
+  const handleJumpToMessage = (messageId) => {
+    setActiveTab("chat");
+    setTimeout(() => {
+      const el = document.getElementById(`msg-${messageId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-indigo-500", "transition-all");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-indigo-500");
+        }, 2000);
+      }
+    }, 100);
+  };
+
+  const mediaMessagesCount = useMemo(() => {
+    return messages.filter((m) => m.attachment && m.attachment.url).length;
+  }, [messages]);
+
   return (
     <div className="h-[calc(100vh-6.5rem)] rounded-3xl border border-white/10 bg-[#0B1120] overflow-hidden flex shadow-2xl">
-      {/* Left Column: Conversation List */}
+      {activePreview && (
+        <FilePreviewModal
+          attachment={activePreview.attachment}
+          senderName={activePreview.senderName}
+          createdAt={activePreview.createdAt}
+          onClose={() => setActivePreview(null)}
+          onNext={handleNextPreview}
+          onPrev={handlePrevPreview}
+          hasNext={activePreview.list && activePreview.index < activePreview.list.length - 1}
+          hasPrev={activePreview.list && activePreview.index > 0}
+        />
+      )}
+
       <div
         className={`w-full md:w-80 lg:w-96 flex-shrink-0 ${
           selectedConversation ? "hidden md:flex" : "flex"
@@ -313,7 +383,6 @@ const ProjectChatPage = () => {
         />
       </div>
 
-      {/* Right Column: Selected Conversation Chat */}
       <div
         className={`flex-1 flex flex-col h-full bg-[#09090B] ${
           !selectedConversation ? "hidden md:flex" : "flex"
@@ -321,7 +390,6 @@ const ProjectChatPage = () => {
       >
         {selectedConversation ? (
           <>
-            {/* Top Chat Header */}
             <ChatHeader
               conversation={selectedConversation}
               onBack={() => {
@@ -329,26 +397,38 @@ const ProjectChatPage = () => {
                 navigate("/messages");
               }}
               currentUserId={currentUserId}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              mediaCount={mediaMessagesCount}
             />
 
-            {/* Message History Area */}
-            <MessageList
-              messages={messages}
-              currentUserId={currentUserId}
-              userRole={role}
-              onDeleteMessage={handleDeleteMessage}
-              loading={loadingMessages}
-              participants={selectedConversation.participants || []}
-            />
+            {activeTab === "chat" ? (
+              <>
+                <MessageList
+                  messages={messages}
+                  currentUserId={currentUserId}
+                  userRole={role}
+                  onDeleteMessage={handleDeleteMessage}
+                  onViewAttachment={(att, sender, date) => handleOpenPreview(att, sender, date)}
+                  loading={loadingMessages}
+                  participants={selectedConversation.participants || []}
+                />
 
-            {/* Bottom Message Composer */}
-            <MessageComposer
-              onSendMessage={handleSendMessage}
-              disabled={sending}
-            />
+                <MessageComposer
+                  onSendMessage={handleSendMessage}
+                  disabled={sending}
+                  uploading={sending}
+                />
+              </>
+            ) : (
+              <MediaGallery
+                messages={messages}
+                onSelectMedia={(att, sender, date, idx, list) => handleOpenPreview(att, sender, date, idx, list)}
+                onJumpToMessage={handleJumpToMessage}
+              />
+            )}
           </>
         ) : (
-          /* Empty State when no conversation is selected on desktop */
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400 select-none">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600/20 to-blue-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 shadow-2xl shadow-indigo-500/10">
               <FiMessageSquare className="w-10 h-10" />

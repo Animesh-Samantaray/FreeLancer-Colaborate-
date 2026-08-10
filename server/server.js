@@ -1,10 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 // Route imports
+import dns from "dns";
 import projectRoutes from './routes/project.route.js';
 import authRoutes from "./routes/auth.routes.js";
 import clientRoutes from "./routes/client.routes.js";
@@ -56,7 +58,6 @@ app.use(
   })
 );
 
-
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
@@ -69,7 +70,7 @@ app.use("/api/client", clientRoutes);
 app.use("/api/freelancer", freelancerRoutes);
 app.use("/api/proposal", proposalRoutes);
 app.use("/api/invitation", invitationRoutes);
-app.use("/api/ai" ,  aiRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/milestone", milestoneRoutes);
 app.use("/api/task", taskRoutes);
 app.use("/api/conversation", conversationRoutes);
