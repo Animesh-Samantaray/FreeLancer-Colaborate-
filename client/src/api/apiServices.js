@@ -174,8 +174,14 @@ export const getProjectConversationApi = async (projectId) => {
    ========================================================================== */
 
 // Send a message in a conversation
-export const sendMessageApi = async (conversationId, message) => {
-  const response = await api.post(`/message/${conversationId}`, { message });
+export const sendMessageApi = async (conversationId, data, onUploadProgress) => {
+  if (data instanceof FormData) {
+    const response = await api.post(`/message/${conversationId}`, data, {
+      onUploadProgress,
+    });
+    return response.data;
+  }
+  const response = await api.post(`/message/${conversationId}`, { message: data });
   return response.data;
 };
 

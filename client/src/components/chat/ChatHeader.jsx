@@ -1,5 +1,5 @@
 import React from "react";
-import { FiArrowLeft, FiFolder, FiUsers, FiCheckCircle, FiShield } from "react-icons/fi";
+import { FiArrowLeft, FiFolder, FiUsers, FiMessageSquare, FiGrid, FiImage } from "react-icons/fi";
 
 const getRoleBadge = (role) => {
   const r = (role || "freelancer").toLowerCase();
@@ -8,7 +8,14 @@ const getRoleBadge = (role) => {
   return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
 };
 
-const ChatHeader = ({ conversation, onBack, currentUserId }) => {
+const ChatHeader = ({
+  conversation,
+  onBack,
+  currentUserId,
+  activeTab = "chat",
+  setActiveTab,
+  mediaCount = 0,
+}) => {
   if (!conversation) return null;
 
   const projectTitle = conversation.project?.title || "Project Chat";
@@ -17,7 +24,6 @@ const ChatHeader = ({ conversation, onBack, currentUserId }) => {
 
   return (
     <div className="sticky top-0 z-30 bg-[#0F172A]/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
-      {/* Left: Mobile Back Button + Project Title & Status */}
       <div className="flex items-center gap-3 min-w-0">
         {onBack && (
           <button
@@ -49,38 +55,63 @@ const ChatHeader = ({ conversation, onBack, currentUserId }) => {
         </div>
       </div>
 
-      {/* Right: Participant Avatars and Badges */}
-      <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar max-w-[45%] justify-end">
-        {participants.map((p) => {
-          const isMe = (p._id || p.id) === currentUserId;
-          return (
-            <div
-              key={p._id || p.id}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/5 border border-white/10 shrink-0"
-              title={`${p.fullName} (${p.role || "Participant"})`}
+      <div className="flex items-center gap-3">
+        {setActiveTab && (
+          <div className="flex items-center p-1 rounded-2xl bg-white/5 border border-white/10">
+            <button
+              onClick={() => setActiveTab("chat")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "chat"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-gray-400 hover:text-white"
+              }`}
             >
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-500 text-[10px] font-bold text-white flex items-center justify-center uppercase shrink-0">
-                {p.avatar ? (
-                  <img
-                    src={p.avatar}
-                    alt={p.fullName}
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  p.fullName?.[0] || "U"
-                )}
-              </div>
-              <div className="hidden lg:block text-left">
-                <p className="text-[11px] font-semibold text-white leading-none truncate max-w-[90px]">
-                  {p.fullName?.split(" ")[0]} {isMe && "(You)"}
-                </p>
-                <span className={`text-[8px] uppercase font-bold px-1.5 py-0.2 rounded border inline-block mt-0.5 ${getRoleBadge(p.role)}`}>
-                  {p.role}
+              <FiMessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chat</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("media")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "media"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FiImage className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Media</span>
+              {mediaCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20">
+                  {mediaCount}
                 </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        <div className="hidden md:flex items-center gap-1.5 overflow-x-auto custom-scrollbar max-w-[200px] justify-end">
+          {participants.map((p) => {
+            const isMe = (p._id || p.id) === currentUserId;
+            return (
+              <div
+                key={p._id || p.id}
+                className="flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white/5 border border-white/10 shrink-0"
+                title={`${p.fullName} (${p.role || "Participant"})`}
+              >
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-500 text-[9px] font-bold text-white flex items-center justify-center uppercase shrink-0">
+                  {p.avatar ? (
+                    <img
+                      src={p.avatar}
+                      alt={p.fullName}
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    p.fullName?.[0] || "U"
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
