@@ -2,6 +2,7 @@ import { io } from "socket.io-client";
 
 let socket = null;
 let currentConversationId = null;
+let currentUserId = null;
 
 const getSocketUrl = () => {
   if (import.meta.env.VITE_SOCKET_URL) {
@@ -26,6 +27,10 @@ export const initSocket = () => {
 
     socket.on("connect", () => {
       console.log("⚡ Socket connected:", socket.id);
+      if (currentUserId) {
+        socket.emit("joinUserRoom", currentUserId);
+        console.log(`⚡ Joined user room: user:${currentUserId}`);
+      }
       if (currentConversationId) {
         socket.emit("joinConversation", currentConversationId);
         console.log(`⚡ Re-joined conversation room: ${currentConversationId}`);
@@ -56,6 +61,21 @@ export const disconnectSocket = () => {
     socket = null;
   }
   currentConversationId = null;
+  currentUserId = null;
+};
+
+export const joinUserRoom = (userId) => {
+  if (!userId) return;
+  currentUserId = userId;
+  const s = getSocket();
+  if (s && s.connected) {
+    s.emit("joinUserRoom", userId);
+    console.log(`⚡ Joined user room immediately: user:${userId}`);
+  }
+};
+
+export const leaveUserRoom = () => {
+  currentUserId = null;
 };
 
 export const joinConversationRoom = (conversationId) => {

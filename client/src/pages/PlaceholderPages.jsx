@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import api from "../api/axios";
 import { getMyProposalsApi, getMyInvitationsApi } from "../api/apiServices";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -574,6 +575,14 @@ export function ProfilePage() {
 
 /* 7. Settings Placeholder */
 export function SettingsPage() {
+  const [activeSection, setActiveSection] = useState("security"); // "security" | "notifications" | "apis"
+  const {
+    notificationSoundEnabled,
+    browserPermission,
+    toggleSound,
+    requestBrowserPermission,
+  } = useNotifications();
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -589,46 +598,134 @@ export function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Navigation list */}
         <div className="glass-card p-4 rounded-2xl border border-white/5 space-y-1 h-fit">
-          <button className="flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/5 text-white">
+          <button
+            onClick={() => setActiveSection("security")}
+            className={`flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition ${
+              activeSection === "security" ? "bg-white/5 text-white" : "text-gray-400 hover:text-white hover:bg-white/2"
+            }`}
+          >
             <FiUser className="w-4 h-4 text-indigo-400" /> Account Security
           </button>
-          <button className="flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/2 transition">
+          <button
+            onClick={() => setActiveSection("notifications")}
+            className={`flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition ${
+              activeSection === "notifications" ? "bg-white/5 text-white" : "text-gray-400 hover:text-white hover:bg-white/2"
+            }`}
+          >
             <FiBell className="w-4 h-4" /> Notifications System
           </button>
-          <button className="flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/2 transition">
+          <button
+            onClick={() => setActiveSection("apis")}
+            className={`flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition ${
+              activeSection === "apis" ? "bg-white/5 text-white" : "text-gray-400 hover:text-white hover:bg-white/2"
+            }`}
+          >
             <FiShield className="w-4 h-4" /> APIs & Permissions
           </button>
         </div>
 
         {/* Content detail */}
         <div className="md:col-span-2 glass-card p-6 rounded-2xl border border-white/5 space-y-6">
-          <h3 className="text-base font-bold font-display border-b border-white/5 pb-2">Account Security Settings</h3>
+          {activeSection === "security" && (
+            <>
+              <h3 className="text-base font-bold font-display border-b border-white/5 pb-2">Account Security Settings</h3>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
-              <div>
-                <h4 className="text-xs font-bold text-white">Multi-Factor Authentication (MFA)</h4>
-                <p className="text-[10px] text-gray-400 mt-1">Add another security layer to verify code logins</p>
-              </div>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">MFA Disabled</span>
-            </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Multi-Factor Authentication (MFA)</h4>
+                    <p className="text-[10px] text-gray-400 mt-1">Add another security layer to verify code logins</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">MFA Disabled</span>
+                </div>
 
-            <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
-              <div>
-                <h4 className="text-xs font-bold text-white">Connected Social Accounts</h4>
-                <p className="text-[10px] text-gray-400 mt-1">Login using Google credentials</p>
-              </div>
-              <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider bg-green-500/10 px-2 py-0.5 rounded">Enabled</span>
-            </div>
+                <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Connected Social Accounts</h4>
+                    <p className="text-[10px] text-gray-400 mt-1">Login using Google credentials</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider bg-green-500/10 px-2 py-0.5 rounded">Enabled</span>
+                </div>
 
-            <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
-              <div>
-                <h4 className="text-xs font-bold text-white">Security Tokens & Keys</h4>
-                <p className="text-[10px] text-gray-400 mt-1">Local session keys used for DB endpoints</p>
+                <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Security Tokens & Keys</h4>
+                    <p className="text-[10px] text-gray-400 mt-1">Local session keys used for DB endpoints</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded font-mono">JWT-Cookie</span>
+                </div>
               </div>
-              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded font-mono">JWT-Cookie</span>
-            </div>
-          </div>
+            </>
+          )}
+
+          {activeSection === "notifications" && (
+            <>
+              <h3 className="text-base font-bold font-display border-b border-white/5 pb-2">Notifications System Settings</h3>
+
+              <div className="space-y-4">
+                {/* Toggle Sounds */}
+                <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Notification Chimes & Sounds</h4>
+                    <p className="text-[10px] text-gray-400 mt-1">Play an audio chirp when a new message or update arrives</p>
+                  </div>
+                  <button
+                    onClick={toggleSound}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition ${
+                      notificationSoundEnabled
+                        ? "bg-[#6366F1] hover:bg-[#5053db] text-white"
+                        : "bg-white/5 hover:bg-white/10 text-gray-300"
+                    }`}
+                  >
+                    {notificationSoundEnabled ? "Sounds Muted" : "Sounds Play Enabled"}
+                  </button>
+                </div>
+
+                {/* Browser Desktop notification permissions */}
+                <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Desktop System Notifications</h4>
+                    <p className="text-[10px] text-gray-400 mt-1">Show browser notification cards outside the window</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                        browserPermission === "granted"
+                          ? "text-green-400 bg-green-500/10"
+                          : browserPermission === "denied"
+                          ? "text-rose-400 bg-rose-500/10"
+                          : "text-amber-400 bg-amber-500/10"
+                      }`}
+                    >
+                      {browserPermission}
+                    </span>
+                    {browserPermission !== "granted" && (
+                      <button
+                        onClick={requestBrowserPermission}
+                        className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white hover:bg-white/10 cursor-pointer transition"
+                      >
+                        Request Permission
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeSection === "apis" && (
+            <>
+              <h3 className="text-base font-bold font-display border-b border-white/5 pb-2">APIs & Integrations Permissions</h3>
+              <div className="py-12 flex flex-col items-center justify-center text-center p-6">
+                <FiShield className="w-10 h-10 text-gray-600 mb-3 bg-white/5 p-2 rounded-2xl" />
+                <h3 className="text-sm font-bold text-white">APIs & Permissions Console</h3>
+                <p className="text-xs text-gray-400 mt-1 max-w-xs">
+                  Generate secure authorization tokens and configure webhook URLs.
+                </p>
+                <ComingSoonBadge />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

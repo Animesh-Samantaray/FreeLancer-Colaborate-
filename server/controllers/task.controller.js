@@ -4,6 +4,7 @@ import ClientProfileModel from "../models/ClientProfile.model.js";
 import Project from "../models/Project.model.js";
 import Milestone from "../models/Milestone.model.js";
 import User from "../models/User.model.js";
+import { createAndSendNotification } from "../services/notification.service.js";
 
 
 // Helper to automatically update milestone status based on task progression
@@ -126,6 +127,18 @@ export const createTask = async (req, res) => {
     await milestone.save();
 
     await syncMilestoneStatus(milestoneId);
+
+    // Send TASK_ASSIGNED notification to freelancer
+    await createAndSendNotification({
+      recipient: freelancer,
+      sender: userId,
+      type: "TASK_ASSIGNED",
+      title: "New Task Assigned",
+      message: `You have been assigned a new task: "${task.title}" under milestone "${milestone.title}".`,
+      projectId,
+      milestoneId,
+      taskId: task._id,
+    });
 
     return res.status(201).json({
       success: true,
@@ -282,6 +295,21 @@ export const updateTaskStatus = async (req, res) => {
     await task.save();
 
     await syncMilestoneStatus(task.milestone);
+
+    // Send TASK_COMPLETED or TASK_UPDATED notification to the counterparty (client vs freelancer)
+    const isCompleted = status === "Completed";
+    const recipientId = req.user.role === "freelancer" ? task.client : task.freelancer;
+
+    await createAndSendNotification({
+      recipient: recipientId,
+      sender: req.user.id,
+      type: isCompleted ? "TASK_COMPLETED" : "TASK_UPDATED",
+      title: isCompleted ? "Task Completed" : "Task Status Changed",
+      message: `Task "${task.title}" status has been changed to "${status}".`,
+      projectId: task.project,
+      milestoneId: task.milestone,
+      taskId: task._id,
+    });
 
     return res.status(200).json({
       success: true,

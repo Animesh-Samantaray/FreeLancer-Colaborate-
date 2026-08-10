@@ -249,6 +249,24 @@
         }
       ],
       "id": "b8ea4856-8af8-419b-ad93-cbecf5b266fd"
+    },
+    {
+      "name": "CHAT",
+      "item": [
+        {
+          "name": "New Request",
+          "id": "4c1012ae-5180-4c74-a634-002bf75bbfee",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "e24f5ab8-3f5f-47f2-bc9f-abe7b607bd69"
     }
   ]
 }

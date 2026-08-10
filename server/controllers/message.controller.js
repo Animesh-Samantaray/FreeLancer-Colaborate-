@@ -1,19 +1,26 @@
 import Message from "../models/Message.model.js";
 import Conversation from "../models/Conversation.model.js";
 import { getIO } from "../configs/socket.js";
+import { uploadToCloudinary ,deleteFromCloudinary} from "../utils/cloudinaryUpload.js";
+import { createAndSendNotification } from "../services/notification.service.js";
+
+
 export const sendMessage = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { message } = req.body;
     const userId = req.user.id;
+    const file = req.file;
 
-    if (!message || !message.trim()) {
+    // Must contain either text or a file
+    if (!message?.trim() && !file) {
       return res.status(400).json({
         success: false,
-        message: "Message is required.",
+        message: "Message or file is required.",
       });
     }
 
+    // Find conversation
     const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
@@ -23,27 +30,77 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    if (!conversation.participants.includes(userId)) {
+    // Check participant
+    const isParticipant = conversation.participants.some(
+      (participant) => participant.toString() === userId.toString()
+    );
+
+    if (!isParticipant) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
       });
     }
 
+    // Upload file if provided
+    let attachment = null;
+
+    if (file) {
+      const uploadedFile = await uploadToCloudinary(file);
+
+      attachment = {
+        url: uploadedFile.secure_url,
+        publicId: uploadedFile.public_id,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+      };
+    }
+
+    // Create message
     const newMessage = await Message.create({
       conversation: conversationId,
       sender: userId,
-      message,
+      message: message?.trim() || "",
+      attachment,
       readBy: [userId],
     });
 
+    // Populate sender
     const populatedMessage = await Message.findById(newMessage._id)
       .populate("sender", "fullName avatar role");
 
-    await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
-
+    // Real-time message
     const io = getIO();
-    io.to(conversationId).emit("newMessage", populatedMessage);
+
+    io.to(conversationId).emit(
+      "newMessage",
+      populatedMessage
+    );
+
+    // Send MESSAGE_RECEIVED or FILE_RECEIVED notification to other participants
+    const isFile = !!populatedMessage.attachment;
+    const type = isFile ? "FILE_RECEIVED" : "MESSAGE_RECEIVED";
+    const title = isFile ? "New File Received" : "New Message";
+    const notificationMessage = isFile
+      ? `${populatedMessage.sender.fullName} sent you a file: ${populatedMessage.attachment.originalName}`
+      : `${populatedMessage.sender.fullName}: ${populatedMessage.message}`;
+
+    if (conversation.participants && conversation.participants.length > 0) {
+      for (const participantId of conversation.participants) {
+        if (participantId.toString() !== userId.toString()) {
+          await createAndSendNotification({
+            recipient: participantId,
+            sender: userId,
+            type,
+            title,
+            message: notificationMessage,
+            projectId: conversation.project,
+            conversationId: conversation._id,
+          });
+        }
+      }
+    }
 
     return res.status(201).json({
       success: true,
@@ -75,7 +132,11 @@ export const getConversationMessages = async (req, res) => {
       });
     }
 
-    if (!conversation.participants.includes(userId)) {
+    const isParticipant = conversation.participants.some(
+      (participant) => participant.toString() === userId.toString()
+    );
+
+    if (!isParticipant) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
@@ -112,10 +173,25 @@ export const markMessageAsRead = async (req, res) => {
 
     const message = await Message.findById(messageId);
 
-    if (!message) {
+    const conversation = await Conversation.findById(
+      message.conversation
+    );
+
+    if (!conversation) {
       return res.status(404).json({
         success: false,
-        message: "Message not found.",
+        message: "Conversation not found.",
+      });
+    }
+
+    const isParticipant = conversation.participants.some(
+      (participant) => participant.toString() === userId.toString()
+    );
+
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized.",
       });
     }
 
@@ -125,10 +201,10 @@ export const markMessageAsRead = async (req, res) => {
 
       const io = getIO();
 
-io.to(message.conversation.toString()).emit("messageRead", {
-  messageId: message._id,
-  userId,
-});
+      io.to(message.conversation.toString()).emit("messageRead", {
+        messageId: message._id,
+        userId,
+      });
     }
 
 
@@ -171,14 +247,19 @@ export const deleteMessage = async (req, res) => {
         message: "Unauthorized.",
       });
     }
-
+    if (message.attachment?.publicId) {
+  await deleteFromCloudinary(
+    message.attachment.publicId,
+    message.attachment.resourceType || "image"
+  );
+}
     await Message.findByIdAndDelete(messageId);
 
     const io = getIO();
 
-io.to(message.conversation.toString()).emit("messageDeleted", {
-  messageId: message._id,
-});
+    io.to(message.conversation.toString()).emit("messageDeleted", {
+      messageId: message._id,
+    });
 
     return res.status(200).json({
       success: true,

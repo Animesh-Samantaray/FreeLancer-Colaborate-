@@ -3,6 +3,7 @@ import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
 import ClientProfile from "../models/ClientProfile.model.js";
+import { createAndSendNotification } from "../services/notification.service.js";
 
 export const createInvitation = async (req, res) => {
   try {
@@ -64,6 +65,16 @@ export const createInvitation = async (req, res) => {
       client: clientId,
       freelancer,
       message,
+    });
+
+    // Send INVITATION_RECEIVED notification to freelancer
+    await createAndSendNotification({
+      recipient: freelancer,
+      sender: clientId,
+      type: "INVITATION_RECEIVED",
+      title: "New Project Invitation",
+      message: `You have been invited to join the project "${existingProject.title}".`,
+      projectId: project,
     });
 
     return res.status(201).json({
@@ -247,6 +258,27 @@ export const updateInvitation = async (req, res) => {
 
     invitation.status = status;
     await invitation.save();
+
+    // Fetch freelancer user details for notification description
+    const freelancerUser = await User.findById(userId);
+    const freelancerName = freelancerUser?.fullName || "A freelancer";
+    
+    // Fetch project title
+    const projectDoc = await Project.findById(invitation.project);
+    const projectTitle = projectDoc?.title || "your project";
+
+    const type = status === "Accepted" ? "INVITATION_ACCEPTED" : "INVITATION_REJECTED";
+    const title = status === "Accepted" ? "Invitation Accepted" : "Invitation Rejected";
+
+    // Send INVITATION_ACCEPTED or INVITATION_REJECTED notification to client
+    await createAndSendNotification({
+      recipient: invitation.client,
+      sender: userId,
+      type,
+      title,
+      message: `${freelancerName} has ${status.toLowerCase()} your invitation for project "${projectTitle}".`,
+      projectId: invitation.project,
+    });
 
     if (status === "Accepted") {
       const project = await Project.findById(invitation.project);

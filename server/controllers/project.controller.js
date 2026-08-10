@@ -8,6 +8,7 @@ import Milestone from "../models/Milestone.model.js";
 import Task from "../models/Task.model.js";
 import Conversation from "../models/Conversation.model.js";
 import Message from "../models/Message.model.js";
+import { createAndSendNotification } from "../services/notification.service.js";
 
 // Helper for cascade deleting all project assets (Proposals, Invitations, Milestones, Tasks, Conversations, Messages)
 const cascadeDeleteProjectData = async (projectId) => {
@@ -103,6 +104,15 @@ export const createProject = async (req, res) => {
         },
       }
     );
+
+    // Send PROJECT_CREATED notification
+    await createAndSendNotification({
+      recipient: req.user.id,
+      type: "PROJECT_CREATED",
+      title: "Project Created",
+      message: `Your project "${project.title}" has been created successfully.`,
+      projectId: project._id,
+    });
 
     return res.status(201).json({
       success: true,
@@ -258,6 +268,25 @@ export const updateProject = async (req, res) => {
 
     if (oldStatus !== "Completed" && project.status === "Completed") {
       await updateProjectStatsOnCompletion(project, oldStatus);
+    }
+
+    // Send PROJECT_APPROVED or PROJECT_REJECTED notification
+    if (oldStatus !== "Open" && project.status === "Open") {
+      await createAndSendNotification({
+        recipient: project.client,
+        type: "PROJECT_APPROVED",
+        title: "Project Approved",
+        message: `Your project "${project.title}" has been approved.`,
+        projectId: project._id,
+      });
+    } else if (oldStatus !== "Cancelled" && project.status === "Cancelled") {
+      await createAndSendNotification({
+        recipient: project.client,
+        type: "PROJECT_REJECTED",
+        title: "Project Cancelled/Rejected",
+        message: `Your project "${project.title}" has been cancelled or rejected.`,
+        projectId: project._id,
+      });
     }
 
     return res.status(200).json({

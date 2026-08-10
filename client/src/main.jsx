@@ -8,13 +8,16 @@ import "./index.css";
 
 import { AuthProvider } from "./context/AuthContext";
 import { ProfileProvider } from "./context/ProfileContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <ProfileProvider>
-          <App />
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
         </ProfileProvider>
       </AuthProvider>
     </BrowserRouter>

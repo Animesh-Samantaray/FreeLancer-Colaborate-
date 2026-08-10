@@ -196,3 +196,38 @@ export const deleteMessageApi = async (messageId) => {
   const response = await api.delete(`/message/${messageId}`);
   return response.data;
 };
+
+/* ==========================================================================
+   NOTIFICATION API SERVICES
+   ========================================================================== */
+
+// Get all notifications for current user
+export const getNotificationsApi = async (isRead) => {
+  const params = isRead !== undefined ? { isRead } : {};
+  const response = await api.get("/notification", { params });
+  return response.data;
+};
+
+// Get the count of unread notifications
+export const getUnreadCountApi = async () => {
+  const response = await api.get("/notification/unread-count");
+  return response.data;
+};
+
+// Mark a single notification as read
+export const markNotificationReadApi = async (id) => {
+  const response = await api.patch(`/notification/${id}/read`);
+  return response.data;
+};
+
+// Mark all notifications as read
+export const markAllNotificationsReadApi = async () => {
+  const response = await api.patch("/notification/read-all");
+  return response.data;
+};
+
+// Delete a notification
+export const deleteNotificationApi = async (id) => {
+  const response = await api.delete(`/notification/${id}`);
+  return response.data;
+};

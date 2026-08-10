@@ -2,6 +2,8 @@ import Proposal from "../models/Proposal.model.js";
 import Project from "../models/Project.model.js";
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
 import ClientProfile from "../models/ClientProfile.model.js";
+import User from "../models/User.model.js";
+import { createAndSendNotification } from "../services/notification.service.js";
 
 export const createProposal = async (req, res) => {
 
@@ -85,6 +87,20 @@ export const createProposal = async (req, res) => {
       bidAmount,
       estimatedDays,
       status: "Pending",
+    });
+
+    // Fetch freelancer user details for notification description
+    const freelancerUser = await User.findById(userId);
+    const freelancerName = freelancerUser?.fullName || "A freelancer";
+
+    // Send PROPOSAL_SUBMITTED notification to project client
+    await createAndSendNotification({
+      recipient: project.client,
+      sender: userId,
+      type: "PROPOSAL_SUBMITTED",
+      title: "New Proposal Submitted",
+      message: `${freelancerName} submitted a proposal for "${project.title}".`,
+      projectId: project._id,
     });
 
     return res.status(201).json({
@@ -230,6 +246,44 @@ export const updateProposal = async (req, res) => {
     const oldStatus = proposal.status;
     proposal.status = status;
     await proposal.save();
+
+    // Trigger PROPOSAL_ACCEPTED/REJECTED notifications
+    if (status === "Accepted") {
+      // Find other active proposals to notify of auto-rejection
+      const otherProposals = await Proposal.find({
+        project: proposal.project,
+        _id: { $ne: proposal._id }
+      });
+
+      for (const otherProposal of otherProposals) {
+        await createAndSendNotification({
+          recipient: otherProposal.freelancer,
+          sender: userId,
+          type: "PROPOSAL_REJECTED",
+          title: "Proposal Rejected",
+          message: `Your proposal for "${project.title}" was not accepted.`,
+          projectId: project._id,
+        });
+      }
+
+      await createAndSendNotification({
+        recipient: proposal.freelancer,
+        sender: userId,
+        type: "PROPOSAL_ACCEPTED",
+        title: "Proposal Accepted",
+        message: `Your proposal for "${project.title}" has been accepted!`,
+        projectId: project._id,
+      });
+    } else if (status === "Rejected") {
+      await createAndSendNotification({
+        recipient: proposal.freelancer,
+        sender: userId,
+        type: "PROPOSAL_REJECTED",
+        title: "Proposal Rejected",
+        message: `Your proposal for "${project.title}" was rejected.`,
+        projectId: project._id,
+      });
+    }
     
 
     if (status === "Accepted") {

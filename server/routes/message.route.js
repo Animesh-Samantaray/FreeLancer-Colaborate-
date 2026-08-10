@@ -1,5 +1,4 @@
 import express from "express";
-
 import {
   sendMessage,
   getConversationMessages,
@@ -9,6 +8,8 @@ import {
 
 import authMiddleware from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/role.middleware.js";
+import upload from '../middlewares/upload.middleware.js';
+
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.post(
   "/:conversationId",
   authMiddleware,
   authorizeRoles("client", "freelancer", "admin"),
+  upload.single("file"),
   sendMessage
 );
 

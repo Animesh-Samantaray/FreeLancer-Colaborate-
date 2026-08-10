@@ -2,6 +2,7 @@ import Milestone from "../models/Milestone.model.js";
 import Project from "../models/Project.model.js";
 import Proposal from "../models/Proposal.model.js";
 import Invitation from "../models/Invitation.model.js";
+import { createAndSendNotification } from "../services/notification.service.js";
 
 export const createMilestone = async (req, res) => {
   try {
@@ -54,6 +55,21 @@ export const createMilestone = async (req, res) => {
 
     project.milestones.push(milestone._id);
     await project.save();
+
+    // Send MILESTONE_CREATED notification to all project freelancers
+    if (project.freelancers && project.freelancers.length > 0) {
+      for (const freelancerId of project.freelancers) {
+        await createAndSendNotification({
+          recipient: freelancerId,
+          sender: userId,
+          type: "MILESTONE_CREATED",
+          title: "New Milestone Created",
+          message: `Milestone "${milestone.title}" has been created in project "${project.title}".`,
+          projectId: project._id,
+          milestoneId: milestone._id,
+        });
+      }
+    }
 
     return res.status(201).json({
       success: true,
@@ -250,6 +266,21 @@ export const updateMilestone = async (req, res) => {
 
     await milestone.save();
 
+    // Send MILESTONE_UPDATED notification to all project freelancers
+    if (project.freelancers && project.freelancers.length > 0) {
+      for (const freelancerId of project.freelancers) {
+        await createAndSendNotification({
+          recipient: freelancerId,
+          sender: userId,
+          type: "MILESTONE_UPDATED",
+          title: "Milestone Updated",
+          message: `Milestone "${milestone.title}" has been updated in project "${project.title}".`,
+          projectId: project._id,
+          milestoneId: milestone._id,
+        });
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: "Milestone updated successfully.",
@@ -320,6 +351,35 @@ export const updateMilestoneStatus = async (req, res) => {
 
     milestone.status = status;
     await milestone.save();
+
+    // Send MILESTONE_COMPLETED notification
+    if (status === "Completed") {
+      if (role === "freelancer") {
+        await createAndSendNotification({
+          recipient: project.client,
+          sender: userId,
+          type: "MILESTONE_COMPLETED",
+          title: "Milestone Completed",
+          message: `Milestone "${milestone.title}" in project "${project.title}" has been marked as completed.`,
+          projectId: project._id,
+          milestoneId: milestone._id,
+        });
+      } else {
+        if (project.freelancers && project.freelancers.length > 0) {
+          for (const freelancerId of project.freelancers) {
+            await createAndSendNotification({
+              recipient: freelancerId,
+              sender: userId,
+              type: "MILESTONE_COMPLETED",
+              title: "Milestone Completed",
+              message: `Milestone "${milestone.title}" in project "${project.title}" has been marked as completed.`,
+              projectId: project._id,
+              milestoneId: milestone._id,
+            });
+          }
+        }
+      }
+    }
 
     return res.status(200).json({
       success: true,

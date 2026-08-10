@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import {
   getMyConversationsApi,
   getProjectConversationApi,
@@ -30,6 +31,7 @@ const ProjectChatPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const { setActiveConversationId } = useNotifications();
   const currentUserId = user?._id || user?.id;
 
   const [conversations, setConversations] = useState([]);
@@ -142,6 +144,7 @@ const ProjectChatPage = () => {
 
     // Join Socket room
     joinConversationRoom(conversationId);
+    setActiveConversationId(conversationId);
 
     // Fetch messages
     const fetchMessages = async () => {
@@ -180,8 +183,9 @@ const ProjectChatPage = () => {
     // Clean up socket room on unmount or switch
     return () => {
       leaveConversationRoom(conversationId);
+      setActiveConversationId(null);
     };
-  }, [selectedConversation, currentUserId]);
+  }, [selectedConversation, currentUserId, setActiveConversationId]);
 
   // Socket event listeners: newMessage
   useEffect(() => {

@@ -12,6 +12,11 @@ export const initializeSocket = (io) => {
       console.log(`${socket.id} joined ${conversationId}`);
     });
 
+    socket.on("joinUserRoom", (userId) => {
+      socket.join(`user:${userId}`);
+      console.log(`${socket.id} joined notification room: user:${userId}`);
+    });
+
     socket.on("leaveConversation", (conversationId) => {
       socket.leave(conversationId);
       console.log(`${socket.id} left ${conversationId}`);
