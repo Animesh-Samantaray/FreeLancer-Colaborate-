@@ -1,27 +1,38 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FiSmile, FiX } from "react-icons/fi";
+import { FiSmile, FiX, FiSearch } from "react-icons/fi";
 
 const EMOJI_CATEGORIES = [
   {
     name: "Popular",
-    emojis: ["👍", "❤️", "😊", "🔥", "🚀", "🎉", "👏", "🙌", "✅", "💯"],
+    emojis: ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "🎉", "🚀", "👏", "🙌", "✅", "💯", "⭐", "💡"],
   },
   {
-    name: "Smileys",
-    emojis: ["😃", "😂", "😅", "😇", "😍", "🤩", "😎", "🤔", "🧐", "😏", "🥳", "😭", "😤", "😴"],
+    name: "Smileys & Expressions",
+    emojis: ["😃", "😅", "😇", "😍", "🤩", "😎", "🤔", "🧐", "😏", "🥳", "😭", "😤", "😴", "😡", "🤯", "🙈", "😜", "🙄", "😳", "🤪", "😷"],
   },
   {
-    name: "Gestures",
-    emojis: ["👋", "✋", "👌", "✌️", "🤞", "🤝", "💪", "👊", "🙏", "👀", "✍️"],
+    name: "Gestures & Hands",
+    emojis: ["👋", "✋", "👌", "✌️", "🤞", "🤝", "💪", "👊", "👀", "✍️", "👈", "👉", "👆", "👇", "🤜", "🤛"],
   },
   {
     name: "Work & Tech",
-    emojis: ["💻", "📱", "📊", "📁", "✏️", "📌", "💡", "⚡", "🎯", "🏆", "⏳", "🔔"],
+    emojis: ["💻", "📱", "📊", "📁", "✏️", "📌", "⚡", "🎯", "🏆", "⏳", "🔔", "✨", "💔", "💬", "🔒", "🔑", "⚠️", "❌"],
+  },
+  {
+    name: "Fun & Objects",
+    emojis: ["🍕", "☕", "🍺", "🎈", "🎁", "⚽", "🎮", "🎵", "🎨", "🌺", "🌸", "🍀", "🐶", "🐱", "🐼", "🦁"],
   },
 ];
 
 const EmojiPickerPopover = ({ onSelectEmoji, isOpen, onClose }) => {
   const popoverRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm("");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -39,6 +50,12 @@ const EmojiPickerPopover = ({ onSelectEmoji, isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const filteredCategories = EMOJI_CATEGORIES.map((cat) => {
+    if (!searchTerm.trim()) return cat;
+    const filteredEmojis = cat.emojis.filter((emoji) => emoji.includes(searchTerm.trim()));
+    return { ...cat, emojis: filteredEmojis };
+  }).filter((cat) => cat.emojis.length > 0);
+
   return (
     <div
       ref={popoverRef}
@@ -49,6 +66,7 @@ const EmojiPickerPopover = ({ onSelectEmoji, isOpen, onClose }) => {
           <FiSmile className="text-indigo-400" /> Choose Emoji
         </span>
         <button
+          type="button"
           onClick={onClose}
           className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer"
         >
@@ -56,8 +74,19 @@ const EmojiPickerPopover = ({ onSelectEmoji, isOpen, onClose }) => {
         </button>
       </div>
 
+      <div className="relative mb-2.5">
+        <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+        <input
+          type="text"
+          placeholder="Search emoji..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500/50 transition"
+        />
+      </div>
+
       <div className="max-h-56 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-        {EMOJI_CATEGORIES.map((cat) => (
+        {filteredCategories.map((cat) => (
           <div key={cat.name}>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-1 px-1">
               {cat.name}
@@ -78,9 +107,15 @@ const EmojiPickerPopover = ({ onSelectEmoji, isOpen, onClose }) => {
             </div>
           </div>
         ))}
+        {filteredCategories.length === 0 && (
+          <div className="py-6 text-center text-xs text-gray-400">
+            No emojis found
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default EmojiPickerPopover;
+
