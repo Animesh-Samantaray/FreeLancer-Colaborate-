@@ -339,13 +339,16 @@ export const reactToMessage = async (req, res) => {
       });
     }
 
-    const existingReaction = message.reactions.find(
-      (reaction) =>
-        reaction.user.toString() === userId.toString()
+    const existingIndex = message.reactions.findIndex(
+      (reaction) => reaction.user.toString() === userId.toString()
     );
 
-    if (existingReaction) {
-      existingReaction.emoji = emoji;
+    if (existingIndex > -1) {
+      if (message.reactions[existingIndex].emoji === emoji) {
+        message.reactions.splice(existingIndex, 1);
+      } else {
+        message.reactions[existingIndex].emoji = emoji;
+      }
     } else {
       message.reactions.push({
         user: userId,

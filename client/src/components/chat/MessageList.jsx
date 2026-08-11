@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import ReactionPickerPopover from "./ReactionPickerPopover";
 import {
   FiCheck,
   FiCheckCircle,
@@ -140,11 +141,36 @@ const getRoleBadge = (role) => {
   return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
 };
 
+const groupReactions = (reactions = [], currentUserId) => {
+  if (!Array.isArray(reactions) || reactions.length === 0) return [];
+  const map = new Map();
+  reactions.forEach((r) => {
+    if (!r || !r.emoji) return;
+    const rUserId = (typeof r.user === "object" ? r.user?._id || r.user?.id : r.user)?.toString();
+    const isCurrentUser = rUserId && currentUserId && rUserId === currentUserId.toString();
+
+    if (!map.has(r.emoji)) {
+      map.set(r.emoji, {
+        emoji: r.emoji,
+        count: 0,
+        hasReacted: false,
+      });
+    }
+    const item = map.get(r.emoji);
+    item.count += 1;
+    if (isCurrentUser) {
+      item.hasReacted = true;
+    }
+  });
+  return Array.from(map.values());
+};
+
 const MessageList = ({
   messages = [],
   currentUserId,
   userRole,
   onDeleteMessage,
+  onReactToMessage,
   onViewAttachment,
   loading = false,
   participants = [],
@@ -152,6 +178,7 @@ const MessageList = ({
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const [downloadingIds, setDownloadingIds] = useState(new Set());
+  const [activePickerMessageId, setActivePickerMessageId] = useState(null);
 
   const downloadAttachment = async (attachment, messageId) => {
     if (!attachment || !attachment.url) {
@@ -288,6 +315,7 @@ const MessageList = ({
 
         const canDelete = isOutgoing || userRole === "admin";
         const isReadByOthers = Array.isArray(msg.readBy) && msg.readBy.some((id) => id?.toString() !== currentUserId?.toString());
+        const groupedReactions = groupReactions(msg.reactions, currentUserId);
 
         const attachment = msg.attachment;
         const mime = attachment?.mimeType || "";
@@ -338,17 +366,38 @@ const MessageList = ({
                 )}
 
                 <div className="relative group/bubble flex items-center gap-2">
-                  {canDelete && (
+                  <ReactionPickerPopover
+                    isOpen={activePickerMessageId === msg._id}
+                    onClose={() => setActivePickerMessageId(null)}
+                    onSelectEmoji={(emoji) => {
+                      if (onReactToMessage) {
+                        onReactToMessage(msg._id, emoji);
+                      }
+                    }}
+                    isOutgoing={isOutgoing}
+                  />
+
+                  <div className={`flex items-center gap-1 transition ${activePickerMessageId === msg._id ? "opacity-100" : "opacity-0 group-hover/bubble:opacity-100"} ${isOutgoing ? "order-first" : "order-last"}`}>
                     <button
-                      onClick={() => onDeleteMessage && onDeleteMessage(msg._id)}
-                      className={`opacity-0 group-hover/bubble:opacity-100 p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 transition transform hover:scale-105 cursor-pointer ${
-                        isOutgoing ? "order-first" : "order-last"
-                      }`}
-                      title="Delete Message"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActivePickerMessageId((prev) => (prev === msg._id ? null : msg._id));
+                      }}
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 border border-white/10 transition transform hover:scale-105 cursor-pointer"
+                      title="Add reaction"
                     >
-                      <FiTrash2 className="w-3.5 h-3.5" />
+                      <FiSmile className="w-3.5 h-3.5" />
                     </button>
-                  )}
+                    {canDelete && (
+                      <button
+                        onClick={() => onDeleteMessage && onDeleteMessage(msg._id)}
+                        className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 transition transform hover:scale-105 cursor-pointer"
+                        title="Delete Message"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
                   <div
                     className={`p-3 text-xs leading-relaxed break-words rounded-2xl shadow-md transition ${
@@ -496,6 +545,31 @@ const MessageList = ({
                     </div>
                   </div>
                 </div>
+
+                {groupedReactions.length > 0 && (
+                  <div className={`flex flex-wrap items-center gap-1 mt-1.5 select-none ${isOutgoing ? "justify-end" : "justify-start"}`}>
+                    {groupedReactions.map(({ emoji, count, hasReacted }) => (
+                      <button
+                        key={emoji}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onReactToMessage) {
+                            onReactToMessage(msg._id, emoji);
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition transform hover:scale-105 active:scale-95 cursor-pointer ${
+                          hasReacted
+                            ? "bg-indigo-500/30 border-indigo-400/60 text-indigo-200 shadow-sm shadow-indigo-500/30 font-bold"
+                            : "bg-[#1E293B]/90 border-white/10 text-gray-300 hover:bg-white/15"
+                        }`}
+                        title={hasReacted ? `Remove your ${emoji} reaction` : `React with ${emoji}`}
+                      >
+                        <span>{emoji}</span>
+                        <span className="text-[10px]">{count}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </React.Fragment>
