@@ -203,6 +203,13 @@ export const deleteMessageApi = async (messageId) => {
   return response.data;
 };
 
+// React to a message with an emoji (or toggle/change reaction)
+export const reactToMessageApi = async (messageId, emoji) => {
+  const response = await api.patch(`/message/${messageId}/reaction`, { emoji });
+  return response.data;
+};
+
+
 /* ==========================================================================
    NOTIFICATION API SERVICES
    ========================================================================== */

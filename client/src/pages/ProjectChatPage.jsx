@@ -10,6 +10,7 @@ import {
   sendMessageApi,
   deleteMessageApi,
   markMessageReadApi,
+  reactToMessageApi,
 } from "../api/apiServices";
 import {
   initSocket,
@@ -18,6 +19,7 @@ import {
   subscribeToNewMessage,
   subscribeToMessageDeleted,
   subscribeToMessageRead,
+  subscribeToMessageReaction,
 } from "../services/socketService";
 import ConversationList from "../components/chat/ConversationList";
 import ChatHeader from "../components/chat/ChatHeader";
@@ -232,6 +234,20 @@ const ProjectChatPage = () => {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToMessageReaction(({ messageId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg._id === messageId) {
+            return { ...msg, reactions };
+          }
+          return msg;
+        })
+      );
+    });
+    return unsubscribe;
+  }, []);
+
   const handleSelectConversation = (conv) => {
     setSelectedConversation(conv);
     setActiveTab("chat");
@@ -292,6 +308,25 @@ const ProjectChatPage = () => {
     } catch (err) {
       console.error("Delete message error:", err);
       toast.error("Failed to delete message.");
+    }
+  };
+
+  const handleReactToMessage = async (messageId, emoji) => {
+    try {
+      const res = await reactToMessageApi(messageId, emoji);
+      if (res.success && res.data) {
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg._id === messageId) {
+              return { ...msg, reactions: res.data };
+            }
+            return msg;
+          })
+        );
+      }
+    } catch (err) {
+      console.error("React to message error:", err);
+      toast.error(err.response?.data?.message || "Failed to update reaction.");
     }
   };
 
@@ -428,6 +463,7 @@ const ProjectChatPage = () => {
                   currentUserId={currentUserId}
                   userRole={role}
                   onDeleteMessage={handleDeleteMessage}
+                  onReactToMessage={handleReactToMessage}
                   onViewAttachment={(att, sender, date) => handleOpenPreview(att, sender, date)}
                   loading={loadingMessages}
                   participants={selectedConversation.participants || []}

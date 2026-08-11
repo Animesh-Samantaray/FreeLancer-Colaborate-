@@ -120,3 +120,12 @@ export const subscribeToMessageRead = (callback) => {
     s.off("messageRead", callback);
   };
 };
+
+export const subscribeToMessageReaction = (callback) => {
+  const s = getSocket();
+  s.on("messageReaction", callback);
+  return () => {
+    s.off("messageReaction", callback);
+  };
+};
+
