@@ -32,7 +32,7 @@ const formatDate = (dateStr) => {
 const getDocumentInfo = (mimeType, originalName = "") => {
   const mime = (mimeType || "").toLowerCase();
   const ext = originalName.split(".").pop().toLowerCase();
-  
+
   if (mime === "application/pdf" || ext === "pdf") {
     return {
       type: "PDF Document",
@@ -87,7 +87,7 @@ const getDocumentInfo = (mimeType, originalName = "") => {
       label: "Download"
     };
   }
-  
+
   // Default/Fallback
   return {
     type: ext ? `${ext.toUpperCase()} File` : "Document",
@@ -198,7 +198,7 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
       else documents++;
     });
 
-    return { all: photos + videos, photos, videos, documents };
+    return { all: mediaItems.length, photos, videos, documents };
   }, [mediaItems]);
 
   const filteredItems = useMemo(() => {
@@ -208,8 +208,8 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
       if (activeCategory === "videos") return mime.startsWith("video/");
       if (activeCategory === "documents")
         return !mime.startsWith("image/") && !mime.startsWith("video/");
-      // 'all' represents all photos and videos
-      return mime.startsWith("image/") || mime.startsWith("video/");
+
+      return true;
     });
   }, [mediaItems, activeCategory]);
 
@@ -219,11 +219,10 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveCategory("all")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              activeCategory === "all"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${activeCategory === "all"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                 : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10"
-            }`}
+              }`}
           >
             <FiGrid className="w-3.5 h-3.5" />
             <span>All</span>
@@ -234,11 +233,10 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
 
           <button
             onClick={() => setActiveCategory("photos")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              activeCategory === "photos"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${activeCategory === "photos"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                 : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10"
-            }`}
+              }`}
           >
             <FiImage className="w-3.5 h-3.5" />
             <span>Photos</span>
@@ -249,11 +247,10 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
 
           <button
             onClick={() => setActiveCategory("videos")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              activeCategory === "videos"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${activeCategory === "videos"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                 : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10"
-            }`}
+              }`}
           >
             <FiFilm className="w-3.5 h-3.5" />
             <span>Videos</span>
@@ -264,11 +261,10 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
 
           <button
             onClick={() => setActiveCategory("documents")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              activeCategory === "documents"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${activeCategory === "documents"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                 : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10"
-            }`}
+              }`}
           >
             <FiFileText className="w-3.5 h-3.5" />
             <span>Documents</span>
