@@ -11,6 +11,7 @@ const getRoleBadge = (role) => {
 const ChatHeader = ({
   conversation,
   onBack,
+  onToggleChatsList,
   currentUserId,
   activeTab = "chat",
   setActiveTab,
@@ -28,10 +29,20 @@ const ChatHeader = ({
         {onBack && (
           <button
             onClick={onBack}
-            className="md:hidden p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition cursor-pointer"
+            className="xl:hidden p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition cursor-pointer"
             title="Back to conversations"
           >
             <FiArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {onToggleChatsList && (
+          <button
+            onClick={onToggleChatsList}
+            className="xl:hidden p-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 transition cursor-pointer flex items-center justify-center shrink-0"
+            title="View chats list"
+          >
+            <FiMessageSquare className="w-5 h-5" />
           </button>
         )}
 

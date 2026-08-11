@@ -1,8 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FiSend, FiSmile, FiPaperclip, FiImage, FiFileText, FiFolder } from "react-icons/fi";
+import { FiSend, FiSmile, FiPaperclip, FiImage, FiFileText, FiFolder, FiX, FiFilm } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import EmojiPickerPopover from "./EmojiPickerPopover";
-import AttachmentComposerModal from "./AttachmentComposerModal";
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
 
 const allowedMimeTypes = [
   "image/jpeg",
@@ -52,17 +59,35 @@ const MessageComposer = ({ onSendMessage, disabled = false, uploading = false })
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || disabled || isUploading) return;
+    if ((!trimmed && !selectedFile) || disabled || isUploading) return;
 
-    onSendMessage(trimmed);
-    setText("");
-    setShowEmojiPicker(false);
+    try {
+      if (selectedFile) {
+        setIsUploading(true);
+        setUploadProgress(0);
 
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+        await onSendMessage(trimmed, selectedFile, (progress) => {
+          setUploadProgress(progress);
+        });
+
+        setSelectedFile(null);
+      } else {
+        await onSendMessage(trimmed);
+      }
+      setText("");
+      setShowEmojiPicker(false);
+
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+    } catch (err) {
+      console.error("Composer submit error:", err);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -116,36 +141,62 @@ const MessageComposer = ({ onSendMessage, disabled = false, uploading = false })
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSendAttachmentModal = async (captionText) => {
-    if (!selectedFile) return;
-    try {
-      setIsUploading(true);
-      setUploadProgress(0);
-
-      await onSendMessage(captionText, selectedFile, (progress) => {
-        setUploadProgress(progress);
-      });
-
-      setSelectedFile(null);
-    } catch (err) {
-      console.error("Upload error:", err);
-      toast.error("Unable to send file. Please try again.");
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
-  };
-
   return (
     <div className="sticky bottom-0 z-30 bg-[#0F172A]/95 backdrop-blur-xl border-t border-white/10 p-3 sm:p-4">
       {selectedFile && (
-        <AttachmentComposerModal
-          file={selectedFile}
-          onClose={() => setSelectedFile(null)}
-          onSend={handleSendAttachmentModal}
-          uploading={isUploading}
-          uploadProgress={uploadProgress}
-        />
+        <div className="mb-3 max-w-6xl mx-auto p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4 relative overflow-hidden animate-fadeIn">
+          <div className="flex items-center gap-3 min-w-0">
+            {selectedFile.type.startsWith("image/") ? (
+              <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                <img
+                  src={URL.createObjectURL(selectedFile)}
+                  alt={selectedFile.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : selectedFile.type.startsWith("video/") ? (
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 text-xl">
+                <FiFilm className="w-5 h-5" />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 text-xl">
+                <FiFileText className="w-5 h-5" />
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white truncate max-w-[200px] sm:max-w-md">
+                {selectedFile.name}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {formatFileSize(selectedFile.size)} • {selectedFile.type || "Document"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isUploading && (
+              <div className="flex flex-col items-end gap-1 mr-2">
+                <span className="text-[10px] font-semibold text-indigo-400">Uploading {uploadProgress}%</span>
+                <div className="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-500 transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedFile(null)}
+              disabled={isUploading}
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition disabled:opacity-50 cursor-pointer"
+              title="Remove attachment"
+            >
+              <FiX className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       )}
 
       <input
@@ -251,7 +302,7 @@ const MessageComposer = ({ onSendMessage, disabled = false, uploading = false })
 
         <button
           type="submit"
-          disabled={!text.trim() || disabled || isUploading}
+          disabled={(!text.trim() && !selectedFile) || disabled || isUploading}
           className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:from-gray-700 disabled:to-gray-800 disabled:opacity-40 text-white p-3 rounded-2xl shadow-lg shadow-indigo-500/20 transition transform hover:scale-[1.03] active:scale-95 cursor-pointer disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
           title="Send Message"
         >

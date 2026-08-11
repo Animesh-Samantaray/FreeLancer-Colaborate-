@@ -47,6 +47,7 @@ const ProjectChatPage = () => {
 
   const [activeTab, setActiveTab] = useState("chat");
   const [activePreview, setActivePreview] = useState(null);
+  const [isChatsListOpen, setIsChatsListOpen] = useState(false);
 
   useEffect(() => {
     if (currentUserId) {
@@ -349,11 +350,17 @@ const ProjectChatPage = () => {
   };
 
   const mediaMessagesCount = useMemo(() => {
-    return messages.filter((m) => m.attachment && m.attachment.url).length;
+    return messages.filter(
+      (m) =>
+        m.attachment &&
+        m.attachment.url &&
+        (m.attachment.mimeType?.startsWith("image/") ||
+          m.attachment.mimeType?.startsWith("video/"))
+    ).length;
   }, [messages]);
 
   return (
-    <div className="h-[calc(100vh-6.5rem)] rounded-3xl border border-white/10 bg-[#0B1120] overflow-hidden flex shadow-2xl">
+    <div className="h-[calc(100vh-6.5rem)] rounded-3xl border border-white/10 bg-[#0B1120] overflow-hidden flex shadow-2xl relative">
       {activePreview && (
         <FilePreviewModal
           attachment={activePreview.attachment}
@@ -367,15 +374,26 @@ const ProjectChatPage = () => {
         />
       )}
 
+      {/* Chats List Drawer Backdrop (on mobile/tablet) */}
+      {isChatsListOpen && (
+        <div
+          onClick={() => setIsChatsListOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden transition-opacity"
+        />
+      )}
+
       <div
-        className={`w-full md:w-80 lg:w-96 flex-shrink-0 ${
-          selectedConversation ? "hidden md:flex" : "flex"
-        } flex-col h-full`}
+        className={`fixed inset-y-0 left-0 z-50 w-80 sm:w-96 flex-col h-full bg-[#0B1120] border-r border-white/10 transition-transform duration-300 xl:translate-x-0 xl:static xl:flex xl:w-80 lg:w-96 flex-shrink-0 ${
+          isChatsListOpen ? "translate-x-0" : "-translate-x-full"
+        } ${selectedConversation ? "hidden xl:flex" : "flex w-full"}`}
       >
         <ConversationList
           conversations={conversations}
           selectedConversationId={selectedConversation?._id}
-          onSelectConversation={handleSelectConversation}
+          onSelectConversation={(conv) => {
+            handleSelectConversation(conv);
+            setIsChatsListOpen(false);
+          }}
           loading={loadingConversations}
           currentUserId={currentUserId}
           unreadsMap={unreadsMap}
@@ -385,7 +403,7 @@ const ProjectChatPage = () => {
 
       <div
         className={`flex-1 flex flex-col h-full bg-[#09090B] ${
-          !selectedConversation ? "hidden md:flex" : "flex"
+          !selectedConversation ? "hidden xl:flex" : "flex"
         }`}
       >
         {selectedConversation ? (
@@ -396,6 +414,7 @@ const ProjectChatPage = () => {
                 setSelectedConversation(null);
                 navigate("/messages");
               }}
+              onToggleChatsList={() => setIsChatsListOpen(true)}
               currentUserId={currentUserId}
               activeTab={activeTab}
               setActiveTab={setActiveTab}

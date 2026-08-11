@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import {
   FiX,
   FiDownload,
@@ -33,6 +34,47 @@ const FilePreviewModal = ({
   hasPrev = false,
 }) => {
   const [zoomed, setZoomed] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const downloadAttachment = async () => {
+    if (!attachment || !attachment.url) {
+      toast.error("Unable to download this file. Invalid URL.");
+      return;
+    }
+
+    if (isDownloading) return;
+    setIsDownloading(true);
+
+    try {
+      const res = await fetch(attachment.url, {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+      });
+      if (!res.ok) throw new Error("Network response was not ok");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = attachment.originalName || "download";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn("Blob fetch download failed, using fallback tab-based download:", err);
+      const link = document.createElement("a");
+      link.href = attachment.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = attachment.originalName || "download";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -102,17 +144,22 @@ const FilePreviewModal = ({
               </button>
             )}
 
-            <a
-              href={attachment.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              download={attachment.originalName || true}
-              className="p-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-              title="Download / Open external"
+            <button
+              disabled={isDownloading}
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadAttachment();
+              }}
+              className="p-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition flex items-center gap-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50"
+              title="Download original file"
             >
-              <FiDownload className="w-4 h-4" />
-              <span className="hidden sm:inline">Download</span>
-            </a>
+              {isDownloading ? (
+                <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <FiDownload className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">{isDownloading ? "Downloading..." : "Download"}</span>
+            </button>
 
             <button
               onClick={onClose}

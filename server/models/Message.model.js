@@ -51,6 +51,20 @@ const messageSchema = new mongoose.Schema(
         default: null,
       },
     },
+    reactions: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    emoji: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+],
 
     readBy: [
       {

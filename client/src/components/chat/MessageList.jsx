@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 import {
   FiCheck,
   FiCheckCircle,
@@ -12,6 +13,7 @@ import {
   FiExternalLink,
   FiEye,
   FiPaperclip,
+  FiFolder,
 } from "react-icons/fi";
 
 const formatMessageTime = (dateStr) => {
@@ -46,6 +48,91 @@ const formatFileSize = (bytes) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
+const getDocumentInfo = (mimeType, originalName = "") => {
+  const mime = (mimeType || "").toLowerCase();
+  const ext = originalName.split(".").pop().toLowerCase();
+  
+  if (mime === "application/pdf" || ext === "pdf") {
+    return {
+      type: "PDF Document",
+      icon: "pdf",
+      color: "from-rose-500/20 to-red-600/10 border-red-500/30 text-red-400 bg-red-950/20",
+      previewable: true,
+      label: "Open"
+    };
+  }
+  if (mime === "text/plain" || ext === "txt") {
+    return {
+      type: "Text File",
+      icon: "text",
+      color: "from-slate-500/20 to-slate-600/10 border-slate-500/30 text-slate-300 bg-slate-950/20",
+      previewable: true,
+      label: "Open"
+    };
+  }
+  if (mime === "application/msword" || mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || ext === "doc" || ext === "docx") {
+    return {
+      type: "Word Document",
+      icon: "word",
+      color: "from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400 bg-blue-950/20",
+      previewable: false,
+      label: "Download"
+    };
+  }
+  if (mime === "application/vnd.ms-excel" || mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || ext === "xls" || ext === "xlsx") {
+    return {
+      type: "Excel Spreadsheet",
+      icon: "excel",
+      color: "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400 bg-emerald-950/20",
+      previewable: false,
+      label: "Download"
+    };
+  }
+  if (mime === "application/vnd.ms-powerpoint" || mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation" || ext === "ppt" || ext === "pptx") {
+    return {
+      type: "PowerPoint",
+      icon: "powerpoint",
+      color: "from-amber-500/20 to-orange-600/10 border-orange-500/30 text-orange-400 bg-orange-950/20",
+      previewable: false,
+      label: "Download"
+    };
+  }
+  if (mime === "application/zip" || mime === "application/x-zip-compressed" || ext === "zip" || ext === "rar" || ext === "7z") {
+    return {
+      type: "Archive",
+      icon: "zip",
+      color: "from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 text-yellow-400 bg-yellow-950/20",
+      previewable: false,
+      label: "Download"
+    };
+  }
+  
+  // Default/Fallback
+  return {
+    type: ext ? `${ext.toUpperCase()} File` : "Document",
+    icon: "generic",
+    color: "from-indigo-500/20 to-indigo-600/10 border-indigo-500/30 text-indigo-400 bg-indigo-950/20",
+    previewable: false,
+    label: "Download"
+  };
+};
+
+const getIconComponent = (iconType) => {
+  switch (iconType) {
+    case "pdf":
+    case "text":
+    case "word":
+    case "excel":
+    case "powerpoint":
+      return <FiFileText className="w-5 h-5" />;
+    case "zip":
+      return <FiFolder className="w-5 h-5" />;
+    default:
+      return <FiPaperclip className="w-5 h-5" />;
+  }
+};
+
+// Helper definitions
 const getRoleBadge = (role) => {
   const r = (role || "freelancer").toLowerCase();
   if (r === "client") return "bg-purple-500/10 text-purple-400 border-purple-500/20";
@@ -64,6 +151,55 @@ const MessageList = ({
 }) => {
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const [downloadingIds, setDownloadingIds] = useState(new Set());
+
+  const downloadAttachment = async (attachment, messageId) => {
+    if (!attachment || !attachment.url) {
+      toast.error("Unable to download this file. Invalid URL.");
+      return;
+    }
+
+    if (messageId) {
+      if (downloadingIds.has(messageId)) return;
+      setDownloadingIds((prev) => new Set([...prev, messageId]));
+    }
+
+    try {
+      const res = await fetch(attachment.url, {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+      });
+      if (!res.ok) throw new Error("Network response was not ok");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = attachment.originalName || "download";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn("Blob fetch download failed, using fallback tab-based download:", err);
+      const link = document.createElement("a");
+      link.href = attachment.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = attachment.originalName || "download";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      if (messageId) {
+        setDownloadingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(messageId);
+          return next;
+        });
+      }
+    }
+  };
 
   const scrollToBottom = (behavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -224,60 +360,117 @@ const MessageList = ({
                     {attachment && attachment.url && (
                       <div className="mb-2">
                         {isImage && (
-                          <div
-                            onClick={() => onViewAttachment && onViewAttachment(attachment, senderName, msg.createdAt)}
-                            className="relative rounded-xl overflow-hidden cursor-pointer max-w-sm max-h-72 border border-white/10 group/img shadow-md bg-black/30"
-                          >
+                          <div className="relative rounded-xl overflow-hidden max-w-full xs:max-w-xs sm:max-w-sm max-h-72 border border-white/10 group/img shadow-md bg-black/30">
                             <img
                               src={attachment.url}
                               alt={attachment.originalName || "Attached Image"}
-                              className="max-h-72 w-full object-cover transition duration-300 group-hover/img:scale-105"
+                              className="max-h-72 w-full object-cover"
                               loading="lazy"
                             />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center text-white gap-1.5 font-semibold text-xs">
-                              <FiEye className="w-4 h-4" />
-                              <span>View Fullscreen</span>
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center gap-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onViewAttachment && onViewAttachment(attachment, senderName, msg.createdAt);
+                                }}
+                                className="p-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-medium text-xs flex items-center gap-1 cursor-pointer"
+                                title="Zoom preview"
+                              >
+                                <FiEye className="w-4 h-4" />
+                                <span>Preview</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadAttachment(attachment, msg._id);
+                                }}
+                                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs flex items-center gap-1 cursor-pointer border border-white/25"
+                                title="Download original file"
+                              >
+                                {downloadingIds.has(msg._id) ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <FiDownload className="w-4 h-4" />
+                                )}
+                                <span>Download</span>
+                              </button>
                             </div>
                           </div>
                         )}
 
                         {isVideo && (
-                          <div className="relative rounded-xl overflow-hidden max-w-sm border border-white/10 shadow-md bg-black/40">
+                          <div className="relative rounded-xl overflow-hidden max-w-full xs:max-w-xs sm:max-w-sm border border-white/10 shadow-md bg-black/40 flex flex-col gap-2">
                             <video
                               src={attachment.url}
                               controls
                               preload="metadata"
                               className="max-h-64 w-full rounded-xl"
                             />
+                            <div className="px-3 pb-3 flex items-center justify-between gap-3">
+                              <span className="text-[10px] text-gray-400 truncate max-w-[60%]">
+                                {attachment.originalName}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadAttachment(attachment, msg._id);
+                                }}
+                                className="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 text-[10px] font-semibold transition cursor-pointer flex items-center gap-1.5"
+                              >
+                                {downloadingIds.has(msg._id) ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <FiDownload className="w-3.5 h-3.5" />
+                                )}
+                                <span>Download</span>
+                              </button>
+                            </div>
                           </div>
                         )}
 
-                        {!isImage && !isVideo && (
-                          <div className="p-3 rounded-xl bg-black/30 border border-white/10 flex items-center gap-3 max-w-sm">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg shrink-0 border border-indigo-500/30">
-                              {isPdf ? <FiFileText /> : <FiPaperclip />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-white truncate">
-                                {attachment.originalName || "Document"}
-                              </p>
-                              <p className="text-[10px] text-gray-300 mt-0.5">
-                                {formatFileSize(attachment.size)}
-                              </p>
-                            </div>
-                            <a
-                              href={attachment.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={attachment.originalName || true}
-                              className="p-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 transition text-xs font-medium shrink-0 flex items-center gap-1 cursor-pointer"
-                              title="Open or download file"
+                        {!isImage && !isVideo && (() => {
+                          const docInfo = getDocumentInfo(attachment.mimeType, attachment.originalName);
+                          const isDownloading = downloadingIds.has(msg._id);
+                          return (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadAttachment(attachment, msg._id);
+                              }}
+                              className="p-3 rounded-2xl bg-black/40 border border-white/10 flex items-center gap-3 w-full xs:w-[280px] sm:w-[320px] hover:bg-black/60 hover:border-white/20 transition cursor-pointer select-none"
+                              title={`Click to download ${attachment.originalName || "file"}`}
                             >
-                              <FiExternalLink className="w-3.5 h-3.5" />
-                              <span className="hidden xs:inline">Open</span>
-                            </a>
-                          </div>
-                        )}
+                              <div className={`w-11 h-11 rounded-xl bg-gradient-to-tr ${docInfo.color} flex items-center justify-center shrink-0 border`}>
+                                {getIconComponent(docInfo.icon)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-white truncate" title={attachment.originalName}>
+                                  {attachment.originalName || "Document"}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400">
+                                  <span>{formatFileSize(attachment.size)}</span>
+                                  <span>•</span>
+                                  <span className="truncate">{docInfo.type}</span>
+                                </div>
+                              </div>
+                              <button
+                                disabled={isDownloading}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadAttachment(attachment, msg._id);
+                                }}
+                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition shrink-0"
+                                title="Download"
+                              >
+                                {isDownloading ? (
+                                  <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <FiDownload className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
