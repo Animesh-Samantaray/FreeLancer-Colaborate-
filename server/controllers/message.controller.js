@@ -1,7 +1,7 @@
 import Message from "../models/Message.model.js";
 import Conversation from "../models/Conversation.model.js";
 import { getIO } from "../configs/socket.js";
-import { uploadToCloudinary ,deleteFromCloudinary} from "../utils/cloudinaryUpload.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
 import { createAndSendNotification } from "../services/notification.service.js";
 
 
@@ -45,23 +45,23 @@ export const sendMessage = async (req, res) => {
     // Upload file if provided
     let attachment = null;
     if (file) {
-  console.log("📎 Uploading file to Cloudinary...");
+      console.log("📎 Uploading file to Cloudinary...");
 
-  const uploadedFile = await uploadToCloudinary(file);
+      const uploadedFile = await uploadToCloudinary(file);
 
-  console.log("☁️ Cloudinary result:", uploadedFile);
+      console.log("☁️ Cloudinary result:", uploadedFile);
 
-  attachment = {
-    url: uploadedFile.secure_url,
-    publicId: uploadedFile.public_id,
-    originalName: file.originalname,
-    mimeType: file.mimetype,
-    size: file.size,
-    resourceType: uploadedFile.resource_type,
-  };
+      attachment = {
+        url: uploadedFile.secure_url,
+        publicId: uploadedFile.public_id,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        resourceType: uploadedFile.resource_type,
+      };
 
-  console.log("📦 Attachment object:", attachment);
-}
+      console.log("📦 Attachment object:", attachment);
+    }
 
     // Create message with dynamic orphan cleanup
     let newMessage = null;
@@ -100,7 +100,7 @@ export const sendMessage = async (req, res) => {
       populatedMessage
     );
 
-    
+
     const isFile = !!populatedMessage.attachment;
     const type = isFile ? "FILE_RECEIVED" : "MESSAGE_RECEIVED";
     const title = isFile ? "New File Received" : "New Message";
@@ -270,11 +270,11 @@ export const deleteMessage = async (req, res) => {
       });
     }
     if (message.attachment?.publicId) {
-  await deleteFromCloudinary(
-    message.attachment.publicId,
-    message.attachment.resourceType || "image"
-  );
-}
+      await deleteFromCloudinary(
+        message.attachment.publicId,
+        message.attachment.resourceType || "image"
+      );
+    }
     await Message.findByIdAndDelete(messageId);
 
     const io = getIO();
@@ -298,3 +298,84 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
+
+
+
+export const reactToMessage = async (req, res) => {
+  try {
+    const messageId = req.params.messageId;
+    const { emoji } = req.body;
+    const userId = req.user.id;
+    if (!emoji) {
+      return res.status(400).json({
+        success: false,
+        message: "Emoji is required.",
+      });
+    }
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: "Message not found.",
+      });
+    }
+    const conversation = await Conversation.findById(
+      message.conversation
+    );
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: "Conversation not found.",
+      });
+    }
+
+    const isParticipant = conversation.participants.some((id) => req.user.id.toString() === id.toString());
+
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    const existingReaction = message.reactions.find(
+      (reaction) =>
+        reaction.user.toString() === userId.toString()
+    );
+
+    if (existingReaction) {
+      existingReaction.emoji = emoji;
+    } else {
+      message.reactions.push({
+        user: userId,
+        emoji,
+      });
+    }
+    await message.save();
+
+    const io = getIO();
+
+    io.to(message.conversation.toString()).emit(
+      "messageReaction",
+      {
+        messageId: message._id,
+        userId,
+        emoji,
+        reactions: message.reactions,
+      }
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Reaction added.",
+      data: message.reactions,
+    });
+  } catch (error) {
+    console.error("React Message Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+}

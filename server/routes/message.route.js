@@ -4,6 +4,7 @@ import {
   getConversationMessages,
   markMessageAsRead,
   deleteMessage,
+  reactToMessage
 } from "../controllers/message.controller.js";
 
 import authMiddleware from "../middlewares/auth.middleware.js";
@@ -57,6 +58,13 @@ router.delete(
   authMiddleware,
   authorizeRoles("client", "freelancer", "admin"),
   deleteMessage
+);
+
+router.patch(
+  "/:messageId/reaction",
+  authMiddleware,
+  authorizeRoles("client", "freelancer", "admin"),
+  reactToMessage
 );
 
 export default router;
