@@ -17,7 +17,17 @@ router.post(
   "/:conversationId",
   authMiddleware,
   authorizeRoles("client", "freelancer", "admin"),
-  upload.single("file"),
+  (req, res, next) => {
+    upload.single("file")(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message || "File upload failed.",
+        });
+      }
+      next();
+    });
+  },
   sendMessage
 );
 

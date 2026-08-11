@@ -44,27 +44,49 @@ export const sendMessage = async (req, res) => {
 
     // Upload file if provided
     let attachment = null;
-
     if (file) {
-      const uploadedFile = await uploadToCloudinary(file);
+  console.log("📎 Uploading file to Cloudinary...");
 
-      attachment = {
-        url: uploadedFile.secure_url,
-        publicId: uploadedFile.public_id,
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        size: file.size,
-      };
+  const uploadedFile = await uploadToCloudinary(file);
+
+  console.log("☁️ Cloudinary result:", uploadedFile);
+
+  attachment = {
+    url: uploadedFile.secure_url,
+    publicId: uploadedFile.public_id,
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+    size: file.size,
+    resourceType: uploadedFile.resource_type,
+  };
+
+  console.log("📦 Attachment object:", attachment);
+}
+
+    // Create message with dynamic orphan cleanup
+    let newMessage = null;
+    try {
+      newMessage = await Message.create({
+        conversation: conversationId,
+        sender: userId,
+        message: message?.trim() || "",
+        attachment,
+        readBy: [userId],
+      });
+    } catch (dbError) {
+      if (attachment && attachment.publicId) {
+        console.log("🧹 DB message creation failed, cleaning up uploaded Cloudinary file...", attachment.publicId);
+        try {
+          await deleteFromCloudinary(attachment.publicId, attachment.resourceType);
+        } catch (cleanupError) {
+          console.error("Failed to clean up orphaned Cloudinary file:", cleanupError);
+        }
+      }
+      throw dbError;
     }
 
-    // Create message
-    const newMessage = await Message.create({
-      conversation: conversationId,
-      sender: userId,
-      message: message?.trim() || "",
-      attachment,
-      readBy: [userId],
-    });
+    console.log("💾 SAVED MESSAGE:", newMessage);
+    console.log("FINAL ATTACHMENT:", newMessage.attachment);
 
     // Populate sender
     const populatedMessage = await Message.findById(newMessage._id)
@@ -78,7 +100,7 @@ export const sendMessage = async (req, res) => {
       populatedMessage
     );
 
-    // Send MESSAGE_RECEIVED or FILE_RECEIVED notification to other participants
+    
     const isFile = !!populatedMessage.attachment;
     const type = isFile ? "FILE_RECEIVED" : "MESSAGE_RECEIVED";
     const title = isFile ? "New File Received" : "New Message";
