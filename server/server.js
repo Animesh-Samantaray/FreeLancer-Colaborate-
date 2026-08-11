@@ -5,7 +5,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-// Route imports
+
 import dns from "dns";
 import projectRoutes from './routes/project.route.js';
 import authRoutes from "./routes/auth.routes.js";
@@ -27,6 +27,7 @@ import { Server } from "socket.io";
 import { initializeSocket } from "./configs/socket.js";
 
 
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
