@@ -63,7 +63,7 @@ export const sendMessage = async (req, res) => {
       console.log("📦 Attachment object:", attachment);
     }
 
-    // Create message with dynamic orphan cleanup
+
     let newMessage = null;
     try {
       newMessage = await Message.create({
@@ -101,7 +101,9 @@ export const sendMessage = async (req, res) => {
     );
 
 
-    const isFile = !!populatedMessage.attachment;
+    const isFile = Boolean(
+      populatedMessage.attachment?.url
+    );
     const type = isFile ? "FILE_RECEIVED" : "MESSAGE_RECEIVED";
     const title = isFile ? "New File Received" : "New Message";
     const notificationMessage = isFile
@@ -117,8 +119,6 @@ export const sendMessage = async (req, res) => {
             type,
             title,
             message: notificationMessage,
-            projectId: conversation.project,
-            conversationId: conversation._id,
           });
         }
       }
