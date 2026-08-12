@@ -244,3 +244,19 @@ export const deleteNotificationApi = async (id) => {
   const response = await api.delete(`/notification/${id}`);
   return response.data;
 };
+
+/* ==========================================================================
+   REVIEW API SERVICES
+   ========================================================================== */
+
+// Client creates a review for a completed project
+export const createReviewApi = async (projectId, data) => {
+  const response = await api.post(`/reviews/project/${projectId}`, data);
+  return response.data;
+};
+
+// Get all reviews of a freelancer
+export const getFreelancerReviewsApi = async (freelancerId) => {
+  const response = await api.get(`/reviews/freelancer/${freelancerId}`);
+  return response.data;
+};

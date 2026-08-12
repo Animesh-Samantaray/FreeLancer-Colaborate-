@@ -6,6 +6,8 @@ import { getMyProposalsApi, getMyInvitationsApi } from "../api/apiServices";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 import MilestonesSection from "../components/MilestonesSection";
+import ReviewsSection from "../components/ReviewsSection";
+import { useProfile } from "../context/ProfileContext";
 import {
   FiFolder,
   FiCheckSquare,
@@ -411,12 +413,11 @@ export function PaymentsPage() {
   );
 }
 
-/* 5. Reviews Placeholder */
+/* 5. Reviews Page */
 export function ReviewsPage() {
-  const reviews = [
-    { rater: "Jonathan Carter", company: "Stripe Developer Relations", stars: 5, feedback: "Exceptional UI designer. Completed the Vite-Tailwind architecture ahead of time with zero guidance necessary.", date: "1 week ago" },
-    { rater: "Amira Krayem", company: "Notion HR Lead", stars: 5, feedback: "Highly recommended for react frontend work. Code is cleanly modularized.", date: "1 month ago" }
-  ];
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const freelancerId = user?._id || user?.id || profile?.user?._id || profile?.user;
 
   return (
     <div className="space-y-6">
@@ -425,53 +426,15 @@ export function ReviewsPage() {
           <h1 className="text-2xl font-bold font-display flex items-center gap-2">
             <FiStar className="text-[#6366F1]" /> Customer Reviews
           </h1>
-          <p className="text-gray-400 text-sm mt-1">View rating feedback, star metrics, and submit testimonials</p>
-        </div>
-        <ComingSoonBadge />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="glass-card p-6 rounded-2xl border border-white/5 flex flex-col justify-center items-center text-center h-40">
-          <h1 className="text-5xl font-black text-white font-display">4.92</h1>
-          <div className="flex gap-1 mt-2 text-amber-400"><FiStar /><FiStar /><FiStar /><FiStar /><FiStar /></div>
-          <span className="text-[10px] text-gray-500 mt-2">Overall profile grade from 18 raters</span>
-        </div>
-        <div className="glass-card md:col-span-3 p-6 rounded-2xl border border-white/5 flex flex-col justify-between">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Feedback Summary</h3>
-          <div className="space-y-2.5">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-gray-400">5 Stars (Quality)</span>
-              <div className="w-1/2 h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-amber-400 to-[#6366F1] rounded-full" style={{ width: "92%" }} />
-              </div>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-gray-400">4 Stars (Timing)</span>
-              <div className="w-1/2 h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-amber-400 to-[#6366F1] rounded-full" style={{ width: "8%" }} />
-              </div>
-            </div>
-          </div>
+          <p className="text-gray-400 text-sm mt-1">View rating feedback, star metrics, and client testimonials</p>
         </div>
       </div>
 
-      <div className="space-y-4">
-        {reviews.map((r, i) => (
-          <div key={i} className="glass-card p-6 rounded-2xl border border-white/5">
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="text-sm font-bold text-white">{r.rater}</h4>
-                <p className="text-xs text-gray-500">{r.company}</p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="flex text-amber-400"><FiStar /><FiStar /><FiStar /><FiStar /><FiStar /></div>
-                <span className="text-[10px] text-gray-500">{r.date}</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-300 mt-4 leading-relaxed italic">"{r.feedback}"</p>
-          </div>
-        ))}
-      </div>
+      <ReviewsSection
+        freelancerId={freelancerId}
+        averageRating={profile?.averageRating}
+        totalReviews={profile?.totalReviews}
+      />
     </div>
   );
 }

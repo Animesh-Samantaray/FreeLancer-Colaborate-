@@ -12,6 +12,7 @@ import {
   FiDollarSign,
   FiCalendar,
   FiCheckSquare,
+  FiStar,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
@@ -26,6 +27,7 @@ import EmptyState from "../../components/EmptyState";
 import Modal from "../../components/Modal";
 import Button from "../../components/Button";
 import MilestonesSection from "../../components/MilestonesSection";
+import GiveReviewModal from "../../components/GiveReviewModal";
 import { Link } from "react-router-dom";
 import { useProfile } from "../../context/ProfileContext";
 
@@ -50,6 +52,11 @@ const MyProject = () => {
   // Milestones modal state
   const [milestonesModalOpen, setMilestonesModalOpen] = useState(false);
   const [milestonesProject, setMilestonesProject] = useState(null);
+
+  // Review modal state
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewProject, setReviewProject] = useState(null);
+  const [reviewedProjectIds, setReviewedProjectIds] = useState({});
 
   const fetchProjects = async () => {
     try {
@@ -275,7 +282,7 @@ const MyProject = () => {
                       <FiChevronRight className="w-3.5 h-3.5" />
                     </Link>
 
-                    {project.status !== "Completed" && (
+                    {project.status !== "Completed" ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -285,6 +292,25 @@ const MyProject = () => {
                       >
                         Complete
                       </Button>
+                    ) : (
+                      reviewedProjectIds[project._id] ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 text-xs font-semibold text-emerald-400">
+                          <FiCheck className="w-3.5 h-3.5" />
+                          Review submitted
+                        </span>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={<FiStar className="text-amber-400 fill-amber-400" />}
+                          onClick={() => {
+                            setReviewProject(project);
+                            setReviewModalOpen(true);
+                          }}
+                        >
+                          Give Review
+                        </Button>
+                      )
                     )}
 
                     <Button
@@ -521,6 +547,21 @@ const MyProject = () => {
           />
         )}
       </Modal>
+
+      {/* Give Review Modal */}
+      <GiveReviewModal
+        isOpen={reviewModalOpen}
+        onClose={() => {
+          setReviewModalOpen(false);
+          setReviewProject(null);
+        }}
+        project={reviewProject}
+        onSuccess={(projectId) => {
+          setReviewedProjectIds((prev) => ({ ...prev, [projectId]: true }));
+          refetchProfile();
+          fetchProjects();
+        }}
+      />
     </div>
   );
 };

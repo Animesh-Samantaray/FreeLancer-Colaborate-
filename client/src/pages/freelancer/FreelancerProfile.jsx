@@ -27,6 +27,7 @@ import Modal from "../../components/Modal";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import ReviewsSection from "../../components/ReviewsSection";
 import { useProfile } from "../../context/ProfileContext";
 
 function FreelancerProfile() {
@@ -323,6 +324,13 @@ function FreelancerProfile() {
               </div>
             )}
           </GlassCard>
+
+          {/* Reviews & Ratings */}
+          <ReviewsSection
+            freelancerId={profile?.user?._id || profile?.user}
+            averageRating={profile?.averageRating}
+            totalReviews={profile?.totalReviews}
+          />
         </div>
 
         {/* Right Column: Social Links & Contact Details */}
