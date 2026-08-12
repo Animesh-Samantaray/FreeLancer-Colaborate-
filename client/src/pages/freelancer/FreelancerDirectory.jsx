@@ -21,6 +21,7 @@ import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import PortfolioCard from "../../components/PortfolioCard";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import ReviewsSection from "../../components/ReviewsSection";
 
 function FreelancerDirectory() {
   const { role } = useAuth();
@@ -371,6 +372,15 @@ function FreelancerDirectory() {
                 </div>
               </div>
             )}
+
+            {/* Reviews & Ratings Section */}
+            <div className="pt-4 border-t border-white/10">
+              <ReviewsSection
+                freelancerId={selectedFreelancer.user?._id || selectedFreelancer.user}
+                averageRating={selectedFreelancer.averageRating}
+                totalReviews={selectedFreelancer.totalReviews}
+              />
+            </div>
           </div>
         )}
       </Modal>
