@@ -19,6 +19,7 @@ import milestoneRoutes from "./routes/milestone.route.js";
 import taskRoutes from './routes/task.route.js';
 import conversationRoutes from "./routes/conversation.route.js";
 import messageRoutes from "./routes/message.route.js";
+import reviewRoutes from "./routes/review.route.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -76,7 +77,7 @@ app.use("/api/milestone", milestoneRoutes);
 app.use("/api/task", taskRoutes);
 app.use("/api/conversation", conversationRoutes);
 app.use("/api/message", messageRoutes);
-
+app.use("/api/reviews", reviewRoutes);
 
 app.get("/", (req, res) => {
   res.json({
