@@ -294,4 +294,29 @@ export const deleteUserApi = async (id) => {
   const response = await api.delete(`/users/${id}`);
   return response.data;
 };
+
+/* ==========================================================================
+   REPORTS & ANALYTICS API SERVICES (ADMIN ONLY)
+   ========================================================================== */
+
+// Get weekly report
+export const getWeeklyReportApi = async () => {
+  const response = await api.get("/reports/weekly");
+  return response.data;
+};
+
+// Get monthly report
+export const getMonthlyReportApi = async () => {
+  const response = await api.get("/reports/monthly");
+  return response.data;
+};
+
+// Get custom date range report
+export const getCustomReportApi = async (startDate, endDate) => {
+  const response = await api.get("/reports/custom", {
+    params: { startDate, endDate },
+  });
+  return response.data;
+};
+
 
