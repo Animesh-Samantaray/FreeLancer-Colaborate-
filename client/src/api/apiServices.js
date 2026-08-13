@@ -259,4 +259,39 @@ export const createReviewApi = async (projectId, data) => {
 export const getFreelancerReviewsApi = async (freelancerId) => {
   const response = await api.get(`/reviews/freelancer/${freelancerId}`);
   return response.data;
-};
+};
+
+/* ==========================================================================
+   USER MANAGEMENT API SERVICES (ADMIN ONLY)
+   ========================================================================== */
+
+// Get all users
+export const getAllUsersApi = async () => {
+  const response = await api.get("/users");
+  return response.data;
+};
+
+// Get single user by ID
+export const getUserByIdApi = async (id) => {
+  const response = await api.get(`/users/${id}`);
+  return response.data;
+};
+
+// Create a new user
+export const createUserApi = async (data) => {
+  const response = await api.post("/users", data);
+  return response.data;
+};
+
+// Update existing user details
+export const updateUserApi = async (id, data) => {
+  const response = await api.put(`/users/${id}`, data);
+  return response.data;
+};
+
+// Delete a user
+export const deleteUserApi = async (id) => {
+  const response = await api.delete(`/users/${id}`);
+  return response.data;
+};
+
