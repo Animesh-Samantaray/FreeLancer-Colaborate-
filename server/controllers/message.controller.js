@@ -10,6 +10,7 @@ export const sendMessage = async (req, res) => {
     const { conversationId } = req.params;
     const { message } = req.body;
     const userId = req.user.id;
+    const user=req.user;
     const file = req.file;
 
     // Must contain either text or a file
@@ -33,9 +34,9 @@ export const sendMessage = async (req, res) => {
     // Check participant
     const isParticipant = conversation.participants.some(
       (participant) => participant.toString() === userId.toString()
-    );
-
-    if (!isParticipant) {
+    ) || user.role.toString()=='admin';
+const isAdmin = req.user.role === "admin";
+    if (!isParticipant && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
@@ -157,8 +158,8 @@ export const getConversationMessages = async (req, res) => {
     const isParticipant = conversation.participants.some(
       (participant) => participant.toString() === userId.toString()
     );
-
-    if (!isParticipant) {
+const isAdmin = req.user.role === "admin";
+    if (!isParticipant && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
@@ -209,8 +210,8 @@ export const markMessageAsRead = async (req, res) => {
     const isParticipant = conversation.participants.some(
       (participant) => participant.toString() === userId.toString()
     );
-
-    if (!isParticipant) {
+const isAdmin = req.user.role === "admin";
+    if (!isParticipant && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
@@ -331,8 +332,8 @@ export const reactToMessage = async (req, res) => {
     }
 
     const isParticipant = conversation.participants.some((id) => req.user.id.toString() === id.toString());
-
-    if (!isParticipant) {
+const isAdmin = req.user.role === "admin";
+    if (!isParticipant && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized.",
