@@ -21,6 +21,7 @@ import conversationRoutes from "./routes/conversation.route.js";
 import messageRoutes from "./routes/message.route.js";
 import reviewRoutes from "./routes/review.route.js";
 import userRoutes from "./routes/user.route.js";
+import reportsRoutes from "./routes/reports.route.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -80,6 +81,7 @@ app.use("/api/conversation", conversationRoutes);
 app.use("/api/message", messageRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/reports", reportsRoutes);
 app.get("/", (req, res) => {
   res.json({
     success: true,
