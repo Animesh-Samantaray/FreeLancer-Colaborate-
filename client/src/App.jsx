@@ -33,6 +33,7 @@ import MyInvitations from "./pages/freelancer/MyInvitations";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProjects from "./pages/admin/Projects";
 import AdminUsers from "./pages/admin/Users";
+import AdminReports from "./pages/admin/Reports";
 
 // Project Chat Page
 import ProjectChatPage from "./pages/ProjectChatPage";
@@ -228,6 +229,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminReports />
               </ProtectedRoute>
             }
           />

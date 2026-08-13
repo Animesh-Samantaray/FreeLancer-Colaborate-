@@ -13,6 +13,7 @@ import {
   FiMail,
   FiCheckSquare,
   FiMessageSquare,
+  FiBarChart2,
 } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
@@ -54,6 +55,7 @@ function DashboardLayout() {
       : [
           { path: "/admin", label: "Dashboard", icon: FiGrid },
           { path: "/admin/projects", label: "Projects", icon: FiFolder },
+          { path: "/admin/reports", label: "Reports & Analytics", icon: FiBarChart2 },
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "All Tasks", icon: FiCheckSquare },
           { path: "/admin/users", label: "Users", icon: FiUsers },
