@@ -17,7 +17,7 @@ const AdminDashboard = () => {
         setLoading(true);
         const [projRes, usersRes] = await Promise.all([
           api.get("/project"),
-          api.get("/auth/users"),
+          api.get("/users"),
         ]);
 
         if (projRes.data?.success) {
