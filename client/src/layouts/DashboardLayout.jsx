@@ -35,6 +35,7 @@ function DashboardLayout() {
           { path: "/client", label: "Dashboard", icon: FiGrid },
           { path: "/client/profile", label: "My Profile", icon: FiUser },
           { path: "/client/my-projects", label: "My Projects", icon: FiFolder },
+          { path: "/invoices", label: "Invoices", icon: FiFileText },
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "Tasks", icon: FiCheckSquare },
           { path: "/client/freelancers", label: "Browse Freelancers", icon: FiUsers },
@@ -44,6 +45,7 @@ function DashboardLayout() {
       ? [
           { path: "/freelancer", label: "Dashboard", icon: FiGrid },
           { path: "/freelancer/profile", label: "My Profile", icon: FiUser },
+          { path: "/invoices", label: "Invoices", icon: FiFileText },
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "My Tasks", icon: FiCheckSquare },
           { path: "/freelancer/browse-projects", label: "Browse Projects", icon: FiSearch },
@@ -56,6 +58,7 @@ function DashboardLayout() {
           { path: "/admin", label: "Dashboard", icon: FiGrid },
           { path: "/admin/projects", label: "Projects", icon: FiFolder },
           { path: "/admin/reports", label: "Reports & Analytics", icon: FiBarChart2 },
+          { path: "/invoices", label: "Invoices", icon: FiFileText },
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "All Tasks", icon: FiCheckSquare },
           { path: "/admin/users", label: "Users", icon: FiUsers },

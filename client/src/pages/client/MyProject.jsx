@@ -24,6 +24,7 @@ import {
   deleteInvitationApi,
   createPaymentOrderApi,
   verifyPaymentApi,
+  createInvoiceApi,
 } from "../../api/apiServices";
 import { loadRazorpayScript } from "../../utils/razorpayLoader";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -41,31 +42,31 @@ const MyProject = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Payment processing state
+
   const [payingProjectId, setPayingProjectId] = useState(null);
 
-  // Proposals modal state
+
   const [proposalsModalOpen, setProposalsModalOpen] = useState(false);
   const [activeProject, setActiveProject] = useState(null);
   const [proposals, setProposals] = useState([]);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
-  // Invitations modal state
+
   const [invitationsModalOpen, setInvitationsModalOpen] = useState(false);
   const [invitations, setInvitations] = useState([]);
   const [invitationsLoading, setInvitationsLoading] = useState(false);
 
-  // Milestones modal state
+
   const [milestonesModalOpen, setMilestonesModalOpen] = useState(false);
   const [milestonesProject, setMilestonesProject] = useState(null);
 
-  // Review modal state
+
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewProject, setReviewProject] = useState(null);
   const [reviewedProjectIds, setReviewedProjectIds] = useState({});
 
-  // Razorpay payment handler
+
   const handlePayProject = async (project) => {
     const projectId = project?._id || project?.id;
     const amount = project?.budget;
@@ -136,6 +137,16 @@ const MyProject = () => {
 
             if (verifyRes?.success) {
               toast.success(verifyRes.message || "Payment verified successfully!");
+
+
+              if (verifyRes?.data?._id) {
+                try {
+                  await createInvoiceApi(verifyRes.data._id);
+                } catch (invErr) {
+                  console.error("Auto invoice creation error:", invErr);
+                }
+              }
+
               await refetchProfile();
               fetchProjects();
             } else {
@@ -199,7 +210,7 @@ const MyProject = () => {
     fetchProjects();
   }, []);
 
-  // Delete project
+
   const handleDeleteProject = async (projectId) => {
     if (!window.confirm("Are you sure you want to delete this project?")) return;
     try {
@@ -215,7 +226,7 @@ const MyProject = () => {
     }
   };
 
-  // Mark project as Completed
+
   const handleMarkCompleted = async (projectId) => {
     try {
       setActionLoadingId(projectId);
@@ -230,7 +241,7 @@ const MyProject = () => {
     }
   };
 
-  // Fetch Proposals for a Public project
+
   const handleOpenProposals = async (project) => {
     setActiveProject(project);
     setProposalsModalOpen(true);
@@ -245,7 +256,7 @@ const MyProject = () => {
     }
   };
 
-  // Accept / Reject proposal
+
   const handleUpdateProposalStatus = async (proposalId, status) => {
     try {
       setActionLoadingId(proposalId);
@@ -263,7 +274,7 @@ const MyProject = () => {
     }
   };
 
-  // Fetch Invitations for a Private project
+
   const handleOpenInvitations = async (project) => {
     setActiveProject(project);
     setInvitationsModalOpen(true);
@@ -278,7 +289,7 @@ const MyProject = () => {
     }
   };
 
-  // Delete/Withdraw invitation
+
   const handleDeleteInvitation = async (invitationId) => {
     try {
       setActionLoadingId(invitationId);
@@ -519,10 +530,10 @@ const MyProject = () => {
                     <div className="flex items-center gap-3">
                       <span
                         className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${prop.status === "Accepted"
-                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                            : prop.status === "Rejected"
-                              ? "bg-red-500/10 border-red-500/20 text-red-400"
-                              : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                          : prop.status === "Rejected"
+                            ? "bg-red-500/10 border-red-500/20 text-red-400"
+                            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
                           }`}
                       >
                         {prop.status}
@@ -621,10 +632,10 @@ const MyProject = () => {
                     <div className="flex items-center gap-3">
                       <span
                         className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${inv.status === "Accepted"
-                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                            : inv.status === "Rejected"
-                              ? "bg-red-500/10 border-red-500/20 text-red-400"
-                              : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                          : inv.status === "Rejected"
+                            ? "bg-red-500/10 border-red-500/20 text-red-400"
+                            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
                           }`}
                       >
                         {inv.status}

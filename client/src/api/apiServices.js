@@ -355,5 +355,28 @@ export const getPaymentByIdApi = async (paymentId) => {
   return response.data;
 };
 
+/* ==========================================================================
+   INVOICE API SERVICES
+   ========================================================================== */
 
-
+
+export const createInvoiceApi = async (paymentId) => {
+  const response = await api.post("/invoices/create", { paymentId });
+  return response.data;
+};
+
+
+export const getMyInvoicesApi = async () => {
+  const response = await api.get("/invoices/my-invoices");
+  return response.data;
+};
+
+
+export const getInvoiceByIdApi = async (invoiceId) => {
+  const response = await api.get(`/invoices/${invoiceId}`);
+  return response.data;
+};
+
+
+
+

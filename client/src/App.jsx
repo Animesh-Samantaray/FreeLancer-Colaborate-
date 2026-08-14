@@ -38,6 +38,10 @@ import AdminReports from "./pages/admin/Reports";
 // Project Chat Page
 import ProjectChatPage from "./pages/ProjectChatPage";
 
+// Invoice Pages
+import InvoicesPage from "./pages/invoices/InvoicesPage";
+import InvoiceDetailsPage from "./pages/invoices/InvoiceDetailsPage";
+
 // Shared Placeholder Pages
 import {
   ProjectsPage,
@@ -247,6 +251,8 @@ function App() {
           <Route path="/messages" element={<ProjectChatPage />} />
           <Route path="/messages/:projectId" element={<ProjectChatPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
+          <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/invoices/:invoiceId" element={<InvoiceDetailsPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
