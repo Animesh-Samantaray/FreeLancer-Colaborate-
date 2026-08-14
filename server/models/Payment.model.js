@@ -17,7 +17,7 @@ const paymentSchema = new mongoose.Schema(
     freelancer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
 
     amount: {

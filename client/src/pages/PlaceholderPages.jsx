@@ -2,9 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../api/axios";
-import { getMyProposalsApi, getMyInvitationsApi } from "../api/apiServices";
+import { toast } from "react-hot-toast";
+import { getMyProposalsApi, getMyInvitationsApi, getMyPaymentsApi, getPaymentByIdApi } from "../api/apiServices";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
+import Modal from "../components/Modal";
+import Button from "../components/Button";
 import MilestonesSection from "../components/MilestonesSection";
 import ReviewsSection from "../components/ReviewsSection";
 import { useProfile } from "../context/ProfileContext";
@@ -333,85 +336,286 @@ export function MessagesPage() {
   );
 }
 
-/* 4. Payments Placeholder */
+/* 4. Payments Page */
 export function PaymentsPage() {
-  const transactions = [
-    { ref: "TXN-9042", client: "Stripe UI Integration", amt: "+$8,500.00", date: "Jul 28, 2026", status: "Cleared" },
-    { ref: "TXN-7182", client: "API Deployment Milestone", amt: "+$12,000.00", date: "Jul 15, 2026", status: "Pending" }
-  ];
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Payment Details Modal State
+  const [selectedPaymentDetails, setSelectedPaymentDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getMyPaymentsApi();
+      if (res?.success && Array.isArray(res.payments)) {
+        setPayments(res.payments);
+      } else {
+        setPayments([]);
+      }
+    } catch (err) {
+      console.error("Fetch payments error:", err);
+      setError(err?.response?.data?.message || "Failed to load payment history.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  const handleOpenPaymentDetails = async (paymentId) => {
+    setDetailsModalOpen(true);
+    setDetailsLoading(true);
+    try {
+      const res = await getPaymentByIdApi(paymentId);
+      if (res?.success && res?.payment) {
+        setSelectedPaymentDetails(res.payment);
+      }
+    } catch (err) {
+      console.error("Fetch payment details error:", err);
+      toast.error(err?.response?.data?.message || "Could not fetch payment details.");
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  // Derived metrics
+  const paidPayments = payments.filter((p) => p.status === "Paid");
+  const pendingPayments = payments.filter((p) => p.status === "Pending");
+  const totalSettledAmount = paidPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+  const totalPendingAmount = pendingPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-display flex items-center gap-2">
-            <FiCreditCard className="text-[#6366F1]" /> Invoices & Ledger
+          <h1 className="text-2xl font-bold font-display flex items-center gap-2 text-white">
+            <FiCreditCard className="text-[#6366F1]" /> Payment Transactions & Ledger
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Process payouts, view deposit summaries, and configure tax details</p>
+          <p className="text-gray-400 text-sm mt-1">
+            Real-time Razorpay transaction history, payment verification records, and project invoices
+          </p>
         </div>
-        <ComingSoonBadge />
       </div>
 
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass-card p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between h-40">
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Available Balance</p>
-            <h2 className="text-3xl font-extrabold mt-2 font-display">$8,500.00</h2>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total Paid & Settled</p>
+            <h2 className="text-3xl font-extrabold mt-2 font-display text-emerald-400">
+              ₹{totalSettledAmount.toLocaleString()}
+            </h2>
           </div>
-          <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white py-2 rounded-xl text-xs font-semibold cursor-pointer transition">
-            Request Payout
-          </button>
+          <span className="text-[10px] text-emerald-500 font-semibold">{paidPayments.length} verified payments</span>
         </div>
+
         <div className="glass-card p-6 rounded-2xl border border-white/5 flex flex-col justify-between h-40">
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Escrow Holds</p>
-            <h2 className="text-3xl font-extrabold mt-2 font-display text-amber-400 font-display">$12,000.00</h2>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Pending Checkout Orders</p>
+            <h2 className="text-3xl font-extrabold mt-2 font-display text-amber-400 font-display">
+              ₹{totalPendingAmount.toLocaleString()}
+            </h2>
           </div>
-          <p className="text-[10px] text-gray-400 flex items-center gap-1"><FiAlertCircle /> Held in escrow until milestone audit clearance</p>
+          <p className="text-[10px] text-gray-400 flex items-center gap-1">
+            <FiAlertCircle /> {pendingPayments.length} checkout orders awaiting verification
+          </p>
         </div>
+
         <div className="glass-card p-6 rounded-2xl border border-white/5 flex flex-col justify-between h-40">
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Life-Time Earnings</p>
-            <h2 className="text-3xl font-extrabold mt-2 font-display text-[#22C55E] font-display">$54,200.00</h2>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total Recorded Transactions</p>
+            <h2 className="text-3xl font-extrabold mt-2 font-display text-white font-display">
+              {payments.length}
+            </h2>
           </div>
-          <span className="text-[10px] text-green-500 font-semibold">+18.5% year over year growth</span>
+          <span className="text-[10px] text-indigo-400 font-semibold">Secured via Razorpay API</span>
         </div>
       </div>
 
+      {/* Transactions Table */}
       <div className="glass-card p-6 rounded-2xl border border-white/5">
-        <h3 className="text-base font-bold mb-4 font-display">Recent Transactions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-white/5 text-gray-500 uppercase tracking-wider font-semibold">
-                <th className="py-3">Reference ID</th>
-                <th className="py-3">Details / Project</th>
-                <th className="py-3">Amount</th>
-                <th className="py-3">Settlement Date</th>
-                <th className="py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 text-gray-200">
-              {transactions.map((t, idx) => (
-                <tr key={idx} className="hover:bg-white/[0.01]">
-                  <td className="py-4 font-mono font-semibold">{t.ref}</td>
-                  <td className="py-4 font-medium text-white">{t.client}</td>
-                  <td className="py-4 font-bold text-white">{t.amt}</td>
-                  <td className="py-4 text-gray-400">{t.date}</td>
-                  <td className="py-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
-                      t.status === "Cleared" ? "text-green-400 bg-green-500/10" : "text-amber-400 bg-amber-400/10"
-                    }`}>{t.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold font-display text-white">Payment History</h3>
+          <button
+            onClick={fetchPayments}
+            className="text-xs text-indigo-400 hover:underline cursor-pointer"
+          >
+            Refresh Records
+          </button>
         </div>
+
+        {loading ? (
+          <LoadingSpinner label="Loading payment history..." />
+        ) : error ? (
+          <EmptyState title="Could not load payments" description={error} />
+        ) : payments.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 text-gray-400 uppercase tracking-wider font-semibold">
+                  <th className="py-3 px-2">Razorpay Payment ID</th>
+                  <th className="py-3 px-2">Project</th>
+                  <th className="py-3 px-2">Amount</th>
+                  <th className="py-3 px-2">Currency</th>
+                  <th className="py-3 px-2">Date</th>
+                  <th className="py-3 px-2">Status</th>
+                  <th className="py-3 px-2 text-right">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-gray-200">
+                {payments.map((p) => (
+                  <tr key={p._id} className="hover:bg-white/[0.02]">
+                    <td className="py-4 px-2 font-mono font-semibold text-gray-300">
+                      {p.razorpayPaymentId || p.razorpayOrderId || "—"}
+                    </td>
+                    <td className="py-4 px-2 font-medium text-white max-w-xs truncate">
+                      {p.project?.title || "Project Payment"}
+                    </td>
+                    <td className="py-4 px-2 font-bold text-emerald-400">
+                      ₹{p.amount?.toLocaleString()}
+                    </td>
+                    <td className="py-4 px-2 text-gray-400 uppercase font-mono">
+                      {p.currency || "INR"}
+                    </td>
+                    <td className="py-4 px-2 text-gray-400">
+                      {new Date(p.paidAt || p.createdAt).toLocaleDateString("en-US", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="py-4 px-2">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${
+                          p.status === "Paid"
+                            ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                            : p.status === "Failed"
+                            ? "text-red-400 bg-red-500/10 border-red-500/20"
+                            : "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-2 text-right">
+                      <button
+                        onClick={() => handleOpenPaymentDetails(p._id)}
+                        className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState
+            title="No payment records found"
+            description="You haven't processed any payment orders yet. Initiating payments for projects will log records here."
+          />
+        )}
       </div>
+
+      {/* Payment Details Modal */}
+      <Modal
+        isOpen={detailsModalOpen}
+        onClose={() => {
+          setDetailsModalOpen(false);
+          setSelectedPaymentDetails(null);
+        }}
+        title="Razorpay Payment Details"
+        maxWidth="max-w-lg"
+      >
+        {detailsLoading ? (
+          <LoadingSpinner label="Fetching payment details..." />
+        ) : selectedPaymentDetails ? (
+          <div className="space-y-4 text-xs text-gray-300">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                <span className="text-gray-400 font-semibold">Payment Status</span>
+                <span
+                  className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold border ${
+                    selectedPaymentDetails.status === "Paid"
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                      : selectedPaymentDetails.status === "Failed"
+                      ? "text-red-400 bg-red-500/10 border-red-500/20"
+                      : "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                  }`}
+                >
+                  {selectedPaymentDetails.status}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400">Amount</span>
+                <span className="text-sm font-bold text-emerald-400">
+                  ₹{selectedPaymentDetails.amount?.toLocaleString()} {selectedPaymentDetails.currency}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400">Project Title</span>
+                <span className="font-bold text-white max-w-xs text-right truncate">
+                  {selectedPaymentDetails.project?.title || "—"}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400">Razorpay Order ID</span>
+                <span className="font-mono text-gray-200">{selectedPaymentDetails.razorpayOrderId || "—"}</span>
+              </div>
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400">Razorpay Payment ID</span>
+                <span className="font-mono text-gray-200">{selectedPaymentDetails.razorpayPaymentId || "—"}</span>
+              </div>
+
+              {selectedPaymentDetails.client && (
+                <div className="flex justify-between items-center py-1 border-t border-white/10 pt-2">
+                  <span className="text-gray-400">Client</span>
+                  <span className="font-semibold text-white">
+                    {selectedPaymentDetails.client.fullName || selectedPaymentDetails.client.email}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400">Date</span>
+                <span>
+                  {new Date(selectedPaymentDetails.paidAt || selectedPaymentDetails.createdAt).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setDetailsModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <EmptyState title="Details unavailable" description="Payment details could not be retrieved." />
+        )}
+      </Modal>
     </div>
   );
 }
+
 
 /* 5. Reviews Page */
 export function ReviewsPage() {

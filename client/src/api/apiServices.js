@@ -319,4 +319,41 @@ export const getCustomReportApi = async (startDate, endDate) => {
   return response.data;
 };
 
+/* ==========================================================================
+   PAYMENT API SERVICES
+   ========================================================================== */
+
+// Create Razorpay payment order
+export const createPaymentOrderApi = async ({ projectId, amount, freelancerId }) => {
+  const response = await api.post("/payments/create-order", { projectId, amount, freelancerId });
+  return response.data;
+};
+
+// Verify Razorpay payment signature
+export const verifyPaymentApi = async ({
+  razorpay_order_id,
+  razorpay_payment_id,
+  razorpay_signature,
+}) => {
+  const response = await api.post("/payments/verify", {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  });
+  return response.data;
+};
+
+// Get logged-in user's payment history
+export const getMyPaymentsApi = async () => {
+  const response = await api.get("/payments/my-payments");
+  return response.data;
+};
+
+// Get single payment details by ID
+export const getPaymentByIdApi = async (paymentId) => {
+  const response = await api.get(`/payments/${paymentId}`);
+  return response.data;
+};
+
+
 
