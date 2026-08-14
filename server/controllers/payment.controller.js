@@ -1,4 +1,5 @@
 import Payment from "../models/Payment.model.js";
+import Project from "../models/Project.model.js";
 import {
   createRazorpayOrder,
   verifyRazorpayPayment,
@@ -6,7 +7,7 @@ import {
 
 export const createPaymentOrder = async (req, res) => {
   try {
-    const { projectId, amount } = req.body;
+    const { projectId, amount, freelancerId } = req.body;
     const userId = req.user.id;
 
     if (!projectId || !amount) {
@@ -23,6 +24,14 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
+    // Try finding the project to check if a freelancer is assigned
+    const project = await Project.findById(projectId);
+    const assignedFreelancer =
+      freelancerId ||
+      (project?.freelancers && project.freelancers.length > 0
+        ? project.freelancers[0]
+        : null);
+
     // Create Razorpay order
     const razorpayOrder = await createRazorpayOrder(
       amount,
@@ -30,14 +39,20 @@ export const createPaymentOrder = async (req, res) => {
     );
 
     // Save payment in MongoDB
-    const payment = await Payment.create({
+    const paymentData = {
       project: projectId,
       client: userId,
       amount,
       currency: "INR",
       status: "Pending",
       razorpayOrderId: razorpayOrder.id,
-    });
+    };
+
+    if (assignedFreelancer) {
+      paymentData.freelancer = assignedFreelancer;
+    }
+
+    const payment = await Payment.create(paymentData);
 
     return res.status(201).json({
       success: true,

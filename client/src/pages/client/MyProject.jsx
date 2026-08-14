@@ -13,6 +13,7 @@ import {
   FiCalendar,
   FiCheckSquare,
   FiStar,
+  FiCreditCard,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
@@ -21,7 +22,10 @@ import {
   updateProposalStatusApi,
   getProjectInvitationsApi,
   deleteInvitationApi,
+  createPaymentOrderApi,
+  verifyPaymentApi,
 } from "../../api/apiServices";
+import { loadRazorpayScript } from "../../utils/razorpayLoader";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import EmptyState from "../../components/EmptyState";
 import Modal from "../../components/Modal";
@@ -36,6 +40,9 @@ const MyProject = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Payment processing state
+  const [payingProjectId, setPayingProjectId] = useState(null);
 
   // Proposals modal state
   const [proposalsModalOpen, setProposalsModalOpen] = useState(false);
@@ -57,6 +64,124 @@ const MyProject = () => {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewProject, setReviewProject] = useState(null);
   const [reviewedProjectIds, setReviewedProjectIds] = useState({});
+
+  // Razorpay payment handler
+  const handlePayProject = async (project) => {
+    const projectId = project?._id || project?.id;
+    const amount = project?.budget;
+    const freelancerId =
+      project?.freelancers && project.freelancers.length > 0
+        ? typeof project.freelancers[0] === "object"
+          ? project.freelancers[0]._id || project.freelancers[0].id
+          : project.freelancers[0]
+        : undefined;
+
+    if (!projectId) {
+      toast.error("Project ID is missing.");
+      return;
+    }
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Valid project budget amount is missing.");
+      return;
+    }
+
+    try {
+      setPayingProjectId(projectId);
+
+      const orderData = await createPaymentOrderApi({
+        projectId,
+        amount: Number(amount),
+        freelancerId,
+      });
+
+      if (!orderData?.success || !orderData?.data?.orderId) {
+        toast.error(orderData?.message || "Failed to create payment order.");
+        setPayingProjectId(null);
+        return;
+      }
+
+      const { orderId, amount: orderAmount, currency } = orderData.data;
+
+
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error("Razorpay SDK failed to load. Please check your internet connection.");
+        setPayingProjectId(null);
+        return;
+      }
+
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!razorpayKey) {
+        toast.error("Razorpay Key ID (VITE_RAZORPAY_KEY_ID) is missing in environment variables.");
+        setPayingProjectId(null);
+        return;
+      }
+
+
+      const options = {
+        key: razorpayKey,
+        amount: orderAmount,
+        currency: currency || "INR",
+        name: "FreeLancer Collaborate",
+        description: `Payment for ${project.title || "Project"}`,
+        order_id: orderId,
+        handler: async function (response) {
+          try {
+
+            const verifyRes = await verifyPaymentApi({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            if (verifyRes?.success) {
+              toast.success(verifyRes.message || "Payment verified successfully!");
+              await refetchProfile();
+              fetchProjects();
+            } else {
+              toast.error(verifyRes?.message || "Payment verification failed.");
+            }
+          } catch (verifyErr) {
+            console.error("Payment verification error:", verifyErr);
+            toast.error(
+              verifyErr?.response?.data?.message || "Payment verification failed."
+            );
+          } finally {
+            setPayingProjectId(null);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            toast.error("Payment checkout closed.");
+            setPayingProjectId(null);
+          },
+        },
+        theme: {
+          color: "#6366F1",
+        },
+      };
+
+
+      const rzp = new window.Razorpay(options);
+
+      rzp.on("payment.failed", function (response) {
+        console.error("Razorpay Payment Failed:", response.error);
+        toast.error(
+          response.error?.description || "Payment failed. Please try again."
+        );
+        setPayingProjectId(null);
+      });
+
+      rzp.open();
+    } catch (err) {
+      console.error("Payment initialization error:", err);
+      toast.error(
+        err?.response?.data?.message || err?.message || "Failed to initialize payment."
+      );
+      setPayingProjectId(null);
+    }
+  };
+
 
   const fetchProjects = async () => {
     try {
@@ -243,6 +368,17 @@ const MyProject = () => {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<FiCreditCard />}
+                      onClick={() => handlePayProject(project)}
+                      disabled={payingProjectId === project._id}
+                      loading={payingProjectId === project._id}
+                    >
+                      {payingProjectId === project._id ? "Creating payment..." : "Pay"}
+                    </Button>
+
+                    <Button
                       variant="secondary"
                       size="sm"
                       icon={<FiCheckSquare className="text-[#6366F1]" />}
@@ -382,13 +518,12 @@ const MyProject = () => {
 
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${
-                          prop.status === "Accepted"
+                        className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${prop.status === "Accepted"
                             ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                             : prop.status === "Rejected"
-                            ? "bg-red-500/10 border-red-500/20 text-red-400"
-                            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                        }`}
+                              ? "bg-red-500/10 border-red-500/20 text-red-400"
+                              : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                          }`}
                       >
                         {prop.status}
                       </span>
@@ -485,13 +620,12 @@ const MyProject = () => {
 
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${
-                          inv.status === "Accepted"
+                        className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${inv.status === "Accepted"
                             ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                             : inv.status === "Rejected"
-                            ? "bg-red-500/10 border-red-500/20 text-red-400"
-                            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                        }`}
+                              ? "bg-red-500/10 border-red-500/20 text-red-400"
+                              : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                          }`}
                       >
                         {inv.status}
                       </span>
