@@ -5,7 +5,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
+import invoiceRoutes from "./routes/invoice.route.js";
 import dns from "dns";
 import projectRoutes from './routes/project.route.js';
 import authRoutes from "./routes/auth.routes.js";
@@ -84,6 +84,7 @@ app.use("/api/message", messageRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/invoices", invoiceRoutes);
 app.get("/", (req, res) => {
   res.json({
     success: true,
