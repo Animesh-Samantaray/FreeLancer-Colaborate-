@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 const paymentSchema = new mongoose.Schema(
   {
     project: {
@@ -64,3 +66,7 @@ const paymentSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+const PaymentModel = mongoose.model("Payment", paymentSchema);
+
+export default PaymentModel;
