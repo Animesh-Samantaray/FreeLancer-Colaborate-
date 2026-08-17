@@ -174,7 +174,9 @@ export const getMilestoneTasks = async (req, res) => {
 
     const tasks = await Task.find({
       _id: { $in: milestone.tasks },
-    }).sort({ createdAt: -1 });
+    })
+      .populate("freelancer", "fullName email avatar")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,

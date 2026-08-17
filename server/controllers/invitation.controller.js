@@ -30,12 +30,7 @@ export const createInvitation = async (req, res) => {
     }
 
    
-    if (existingProject.visibility !== "Private") {
-      return res.status(400).json({
-        success: false,
-        message: "Invitations are allowed only for private projects.",
-      });
-    }
+    // Invitations are allowed for all projects now, so visibility check is removed.
 
     
     const freelancerUser = await User.findById(freelancer);

@@ -136,26 +136,16 @@ const MyProject = () => {
             });
 
             if (verifyRes?.success) {
-              toast.success(verifyRes.message || "Payment verified successfully!");
-
-
-              if (verifyRes?.data?._id) {
-                try {
-                  await createInvoiceApi(verifyRes.data._id);
-                } catch (invErr) {
-                  console.error("Auto invoice creation error:", invErr);
-                }
-              }
-
+              toast.success("Payment successful! Your invoice has been generated and sent by email.");
               await refetchProfile();
               fetchProjects();
             } else {
-              toast.error(verifyRes?.message || "Payment verification failed.");
+              toast.error("Payment verification failed. Please try again.");
             }
           } catch (verifyErr) {
             console.error("Payment verification error:", verifyErr);
             toast.error(
-              verifyErr?.response?.data?.message || "Payment verification failed."
+              verifyErr?.response?.data?.message || "Payment verification failed. Please try again."
             );
           } finally {
             setPayingProjectId(null);
@@ -602,79 +592,99 @@ const MyProject = () => {
       >
         {invitationsLoading ? (
           <LoadingSpinner label="Loading invitations..." />
-        ) : invitations.length > 0 ? (
+        ) : (
           <div className="space-y-4">
-            {invitations.map((inv) => {
-              const freelancerName = inv.freelancer?.fullName || "Freelancer";
-              const freelancerAvatar = inv.freelancer?.avatar;
+            <div className="flex justify-end">
+              <Link
+                to="/client/freelancers"
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#6366F1] hover:bg-[#4F46E5] px-4 py-2 text-xs font-semibold text-white transition"
+              >
+                + Invite Freelancers
+              </Link>
+            </div>
+            {invitations.length > 0 ? (
+              <div className="space-y-4">
+                {invitations.map((inv) => {
+                  const freelancerName = inv.freelancer?.fullName || "Freelancer";
+                  const freelancerAvatar = inv.freelancer?.avatar;
 
-              return (
-                <div
-                  key={inv._id}
-                  className="p-5 rounded-3xl border border-white/10 bg-white/5 space-y-4"
-                >
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={
-                          freelancerAvatar ||
-                          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
-                        }
-                        alt={freelancerName}
-                        className="w-10 h-10 rounded-2xl object-cover border border-white/10 bg-[#09090B]"
-                      />
-                      <div>
-                        <h4 className="text-sm font-bold text-white">{freelancerName}</h4>
-                        <p className="text-xs text-gray-400">{inv.freelancer?.email}</p>
+                  return (
+                    <div
+                      key={inv._id}
+                      className="p-5 rounded-3xl border border-white/10 bg-white/5 space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={
+                              freelancerAvatar ||
+                              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+                            }
+                            alt={freelancerName}
+                            className="w-10 h-10 rounded-2xl object-cover border border-white/10 bg-[#09090B]"
+                          />
+                          <div>
+                            <h4 className="text-sm font-bold text-white">{freelancerName}</h4>
+                            <p className="text-xs text-gray-400">{inv.freelancer?.email}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${inv.status === "Accepted"
+                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                              : inv.status === "Rejected"
+                                ? "bg-red-500/10 border-red-500/20 text-red-400"
+                                : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                              }`}
+                          >
+                            {inv.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {inv.message && (
+                        <div>
+                          <h5 className="text-xs uppercase font-semibold text-gray-400 mb-1">Message Sent</h5>
+                          <p className="text-xs text-gray-300 leading-relaxed bg-black/20 p-3 rounded-2xl border border-white/5">
+                            {inv.message}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-xs text-gray-400 pt-1">
+                        <span>Sent: {new Date(inv.createdAt).toLocaleDateString()}</span>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          loading={actionLoadingId === inv._id}
+                          icon={<FiTrash2 />}
+                          onClick={() => handleDeleteInvitation(inv._id)}
+                        >
+                          Withdraw Invitation
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${inv.status === "Accepted"
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : inv.status === "Rejected"
-                            ? "bg-red-500/10 border-red-500/20 text-red-400"
-                            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
-                          }`}
-                      >
-                        {inv.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {inv.message && (
-                    <div>
-                      <h5 className="text-xs uppercase font-semibold text-gray-400 mb-1">Message Sent</h5>
-                      <p className="text-xs text-gray-300 leading-relaxed bg-black/20 p-3 rounded-2xl border border-white/5">
-                        {inv.message}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs text-gray-400 pt-1">
-                    <span>Sent: {new Date(inv.createdAt).toLocaleDateString()}</span>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                      loading={actionLoadingId === inv._id}
-                      icon={<FiTrash2 />}
-                      onClick={() => handleDeleteInvitation(inv._id)}
-                    >
-                      Withdraw Invitation
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title="No invitations sent"
+                description="You have not sent invitations to any freelancers for this project yet."
+                action={
+                  <Link
+                    to="/client/freelancers"
+                    className="inline-flex items-center gap-2 rounded-3xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition"
+                  >
+                    Browse Freelancer Directory
+                  </Link>
+                }
+              />
+            )}
           </div>
-        ) : (
-          <EmptyState
-            title="No invitations sent"
-            description="You have not sent invitations to any freelancers for this private project yet."
-          />
         )}
       </Modal>
 

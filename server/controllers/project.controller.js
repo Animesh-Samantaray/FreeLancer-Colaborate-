@@ -174,6 +174,7 @@ export const getAllProjects = async (req, res) => {
 
     const projects = await Project.find(query)
       .populate("client", "fullName email avatar")
+      .populate("freelancers", "fullName email avatar")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -202,7 +203,9 @@ export const getProjectById = async (req, res) => {
       query.client = userId;
     }
 
-    const project = await Project.findOne(query).populate("client", "fullName email avatar");
+    const project = await Project.findOne(query)
+      .populate("client", "fullName email avatar")
+      .populate("freelancers", "fullName email avatar");
 
     if (!project) {
       return res.status(404).json({
