@@ -73,6 +73,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/freelancer", freelancerRoutes);
+app.use("/api/freelancers", freelancerRoutes);
 app.use("/api/proposal", proposalRoutes);
 app.use("/api/invitation", invitationRoutes);
 app.use("/api/ai", aiRoutes);

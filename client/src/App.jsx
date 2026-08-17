@@ -28,6 +28,7 @@ import BrowseProjects from "./pages/freelancer/BrowseProjects";
 import ProjectDetails from "./pages/freelancer/ProjectDetails";
 import MyProposals from "./pages/freelancer/MyProposals";
 import MyInvitations from "./pages/freelancer/MyInvitations";
+import MyProjects from "./pages/freelancer/MyProjects";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -207,6 +208,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["freelancer"]}>
                 <MyInvitations />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/my-projects"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer"]}>
+                <MyProjects />
               </ProtectedRoute>
             }
           />

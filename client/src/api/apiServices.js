@@ -377,6 +377,25 @@ export const getInvoiceByIdApi = async (invoiceId) => {
   return response.data;
 };
 
+/* ==========================================================================
+   FREELANCER MY PROJECTS API SERVICE
+   ========================================================================== */
+
+
+export const getMyProjectsApi = async () => {
+  try {
+    const response = await api.get("/freelancer/my-projects");
+    return response.data;
+  } catch (err) {
+    if (err.response?.status === 404) {
+      const fallback = await api.get("/freelancers/my-projects");
+      return fallback.data;
+    }
+    throw err;
+  }
+};
+
+
 
 
 

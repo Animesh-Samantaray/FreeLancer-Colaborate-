@@ -21,7 +21,7 @@ import Navbar from "../components/Navbar";
 function DashboardLayout() {
   const { user, logout, role } = useAuth();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = async () => {
@@ -39,12 +39,12 @@ function DashboardLayout() {
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "Tasks", icon: FiCheckSquare },
           { path: "/client/freelancers", label: "Browse Freelancers", icon: FiUsers },
-          { path: "/settings", label: "Settings", icon: FiSettings },
         ]
       : role === "freelancer"
       ? [
           { path: "/freelancer", label: "Dashboard", icon: FiGrid },
           { path: "/freelancer/profile", label: "My Profile", icon: FiUser },
+          { path: "/freelancer/my-projects", label: "My Projects", icon: FiFolder },
           { path: "/invoices", label: "Invoices", icon: FiFileText },
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "My Tasks", icon: FiCheckSquare },
@@ -52,7 +52,6 @@ function DashboardLayout() {
           { path: "/freelancer/my-proposals", label: "My Proposals", icon: FiFileText },
           { path: "/freelancer/my-invitations", label: "My Invitations", icon: FiMail },
           { path: "/freelancer/clients", label: "Browse Clients", icon: FiBriefcase },
-          { path: "/settings", label: "Settings", icon: FiSettings },
         ]
       : [
           { path: "/admin", label: "Dashboard", icon: FiGrid },
@@ -62,7 +61,6 @@ function DashboardLayout() {
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },
           { path: "/tasks", label: "All Tasks", icon: FiCheckSquare },
           { path: "/admin/users", label: "Users", icon: FiUsers },
-          { path: "/settings", label: "Settings", icon: FiSettings },
         ];
 
   return (
@@ -78,9 +76,9 @@ function DashboardLayout() {
         onLogout={handleLogout}
       />
 
-      <div className="lg:pl-72 flex min-h-screen flex-col">
+      <div className={`transition-all duration-300 ${isSidebarOpen ? "lg:pl-72" : "lg:pl-0"} flex min-h-screen flex-col`}>
         <Navbar
-          onMenuClick={() => setIsSidebarOpen(true)}
+          onMenuClick={() => setIsSidebarOpen((prev) => !prev)}
           onSearch={() => {}}
           searchValue={searchQuery}
           onSearchChange={(e) => setSearchQuery(e.target.value)}
