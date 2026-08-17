@@ -7,7 +7,8 @@ const Navbar = ({ onMenuClick, onSearch, searchValue, onSearchChange, user }) =>
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="lg:hidden rounded-2xl border border-white/10 bg-white/5 p-2 text-gray-300 hover:bg-white/10 cursor-pointer"
+          className="rounded-2xl border border-white/10 bg-white/5 p-2 text-gray-300 hover:bg-white/10 cursor-pointer transition"
+          title="Toggle Sidebar"
         >
           <FiMenu className="w-5 h-5" />
         </button>

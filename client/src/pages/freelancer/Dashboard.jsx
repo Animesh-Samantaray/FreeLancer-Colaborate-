@@ -108,6 +108,9 @@ function Dashboard() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Link to="/freelancer/my-projects">
+              <Button variant="secondary" icon={<FiFolder />}>My Projects</Button>
+            </Link>
             <Link to="/freelancer/my-proposals">
               <Button variant="secondary" icon={<FiFileText />}>My Proposals ({proposalCount})</Button>
             </Link>
@@ -253,6 +256,24 @@ function Dashboard() {
             <p className="text-xs text-gray-400 mb-6">Manage your proposal & invitation pipelines</p>
 
             <div className="space-y-3">
+              <Link
+                to="/freelancer/my-projects"
+                className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#6366F1]">
+                    <FiFolder className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white group-hover:text-[#6366F1] transition">
+                      My Projects
+                    </h4>
+                    <p className="text-xs text-gray-400">View assigned projects & milestones</p>
+                  </div>
+                </div>
+                <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition" />
+              </Link>
+
               <Link
                 to="/freelancer/my-proposals"
                 className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 transition group"
