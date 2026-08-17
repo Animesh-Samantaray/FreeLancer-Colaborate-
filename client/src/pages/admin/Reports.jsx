@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   FiUsers,
   FiFolder,
@@ -7,13 +7,19 @@ import {
   FiRefreshCw,
   FiCalendar,
   FiAlertCircle,
+  FiDownload,
+  FiChevronDown,
+  FiFile,
+  FiGrid,
 } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 import {
   getWeeklyReportApi,
   getMonthlyReportApi,
   getCustomReportApi,
 } from "../../api/apiServices";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { downloadPDF, downloadExcel } from "../../utils/reportExporter";
 
 const formatDate = (dateStr) => {
   if (!dateStr) return "N/A";
@@ -35,6 +41,50 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateError, setDateError] = useState(null);
+
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const downloadRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (downloadRef.current && !downloadRef.current.contains(e.target)) {
+        setDownloadOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDownloadPDF = async () => {
+    if (isDownloading || !report) return;
+    setIsDownloading(true);
+    setDownloadOpen(false);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      downloadPDF(report);
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      toast.error("Unable to generate the report. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    if (isDownloading || !report) return;
+    setIsDownloading(true);
+    setDownloadOpen(false);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      downloadExcel(report);
+    } catch (err) {
+      console.error("Excel generation error:", err);
+      toast.error("Unable to generate the report. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const fetchReport = async (type = reportType, customStart = startDate, customEnd = endDate) => {
     setError(null);
@@ -270,8 +320,7 @@ const Reports = () => {
 
       {!loading && !error && report && (
         <div className="space-y-8">
-          {/* Active Period Display Card */}
-          <div className="glass-card rounded-3xl border border-white/10 p-6 bg-gradient-to-r from-indigo-500/10 to-blue-500/10">
+          <div className="glass-card rounded-3xl border border-white/10 p-6 bg-gradient-to-r from-indigo-500/10 to-blue-500/10 relative z-30">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#6366F1]">
@@ -281,11 +330,48 @@ const Reports = () => {
                   {report.reportType || reportType} Report
                 </h2>
               </div>
-              <div className="flex items-center gap-2 bg-white/10 border border-white/10 rounded-2xl px-4 py-2 text-xs font-medium text-gray-200">
-                <FiCalendar className="w-4 h-4 text-[#6366F1]" />
-                <span>
-                  {formatDate(report.period?.startDate)} → {formatDate(report.period?.endDate)}
-                </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 bg-white/10 border border-white/10 rounded-2xl px-4 py-2.5 text-xs font-medium text-gray-200">
+                  <FiCalendar className="w-4 h-4 text-[#6366F1]" />
+                  <span>
+                    {formatDate(report.period?.startDate)} → {formatDate(report.period?.endDate)}
+                  </span>
+                </div>
+
+                <div className="relative" ref={downloadRef}>
+                  <button
+                    onClick={() => setDownloadOpen((prev) => !prev)}
+                    disabled={isDownloading}
+                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#6366F1] to-[#3B82F6] px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 hover:brightness-110 disabled:opacity-50 transition cursor-pointer"
+                  >
+                    <FiDownload className={`w-4 h-4 ${isDownloading ? "animate-bounce" : ""}`} />
+                    <span>{isDownloading ? "Generating..." : "Download Report"}</span>
+                    <FiChevronDown
+                      className={`w-3.5 h-3.5 transition-transform ${
+                        downloadOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {downloadOpen && !isDownloading && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#1E1B4B] border border-white/10 shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <button
+                        onClick={handleDownloadPDF}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
+                      >
+                        <FiFile className="w-4 h-4 text-red-400" />
+                        <span>Download PDF</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadExcel}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
+                      >
+                        <FiGrid className="w-4 h-4 text-emerald-400" />
+                        <span>Download Excel</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
