@@ -1,9 +1,12 @@
 import Payment from "../models/Payment.model.js";
 import Project from "../models/Project.model.js";
+import User from "../models/User.model.js";
 import {
   createRazorpayOrder,
   verifyRazorpayPayment,
 } from "../services/payment.service.js";
+import { createInvoiceFromPayment } from "../services/invoice.service.js";
+import { sendInvoiceSuccessEmail } from "../utils/sendMail.js";
 
 export const createPaymentOrder = async (req, res) => {
   try {
@@ -138,10 +141,42 @@ export const verifyPayment = async (req, res) => {
 
     await payment.save();
 
+    // Resolve project and payment freelancer if missing
+    const project = await Project.findById(payment.project);
+    if (!payment.freelancer && project) {
+      const freelancerId = project.freelancers && project.freelancers.length > 0 ? project.freelancers[0] : null;
+      if (freelancerId) {
+        payment.freelancer = freelancerId;
+        await payment.save();
+      }
+    }
+
+    // Create the invoice (reuse existing if it exists)
+    const invoice = await createInvoiceFromPayment(payment);
+
+    // Retrieve client and freelancer info for sending the email
+    const client = await User.findById(payment.client);
+    const freelancer = payment.freelancer ? await User.findById(payment.freelancer) : null;
+
+    if (client && freelancer && project) {
+      try {
+        await sendInvoiceSuccessEmail(client, freelancer, project, payment, invoice);
+      } catch (emailError) {
+        console.error("Invoice email failed:", emailError);
+      }
+    } else {
+      console.warn("Could not send invoice email. client, freelancer, or project details missing.", {
+        hasClient: !!client,
+        hasFreelancer: !!freelancer,
+        hasProject: !!project,
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Payment verified successfully.",
       data: payment,
+      invoice,
     });
   } catch (error) {
     console.error("Verify Payment Error:", error);

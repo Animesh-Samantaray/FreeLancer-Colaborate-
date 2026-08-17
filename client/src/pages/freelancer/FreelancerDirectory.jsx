@@ -52,12 +52,9 @@ function FreelancerDirectory() {
         if (role === "client") {
           const projectRes = await api.get("/project");
           if (projectRes.data?.projects) {
-            const privates = projectRes.data.projects.filter(
-              (p) => p.visibility === "Private"
-            );
-            setPrivateProjects(privates);
-            if (privates.length > 0) {
-              setSelectedProjectId(privates[0]._id);
+            setPrivateProjects(projectRes.data.projects);
+            if (projectRes.data.projects.length > 0) {
+              setSelectedProjectId(projectRes.data.projects[0]._id);
             }
           }
         }
@@ -86,7 +83,7 @@ function FreelancerDirectory() {
 
   const handleOpenInviteModal = (freelancer) => {
     if (privateProjects.length === 0) {
-      toast.error("You don't have any Private projects to invite freelancers to.");
+      toast.error("You don't have any projects to invite freelancers to.");
       return;
     }
     setInviteTarget(freelancer);
@@ -100,7 +97,7 @@ function FreelancerDirectory() {
   const handleSendInvitation = async (e) => {
     e.preventDefault();
     if (!selectedProjectId) {
-      toast.error("Please select a private project.");
+      toast.error("Please select a project.");
       return;
     }
     const freelancerUserId = inviteTarget?.user?._id || inviteTarget?.user;
@@ -392,13 +389,13 @@ function FreelancerDirectory() {
           setInviteModalOpen(false);
           setInviteTarget(null);
         }}
-        title={`Invite ${inviteTarget?.user?.fullName || "Freelancer"} to Private Project`}
+        title={`Invite ${inviteTarget?.user?.fullName || "Freelancer"} to Project`}
         maxWidth="max-w-xl"
       >
         <form onSubmit={handleSendInvitation} className="space-y-5">
           <div>
             <label className="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-2">
-              Select Private Project
+              Select Project
             </label>
             <select
               value={selectedProjectId}
