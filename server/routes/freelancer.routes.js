@@ -7,6 +7,7 @@ import {
   updateFreelancerProfile,
   getAllFreelancers,
   getFreelancerById,
+  getMyProjects,
 } from "../controllers/freelancer.controller.js";
 
 const router = express.Router();
@@ -24,6 +25,13 @@ router.put(
   authMiddleware,
   authorizeRoles("freelancer","admin"),
   updateFreelancerProfile
+);
+
+router.get(
+  "/my-projects",
+  authMiddleware,
+  authorizeRoles("freelancer", "admin"),
+  getMyProjects
 );
 
 // Public (authenticated users)
