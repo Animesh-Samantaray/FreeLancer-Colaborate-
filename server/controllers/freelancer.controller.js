@@ -207,3 +207,29 @@ export const updateFreelancerProfile = async (req, res) => {
     });
   }
 };
+
+export const getMyProjects = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const projects = await Project.find({
+      freelancers: userId,
+    })
+      .populate("client", "fullName avatar")
+      .populate("freelancers", "fullName avatar")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: projects.length,
+      projects,
+    });
+  } catch (error) {
+    console.error("Get My Projects Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
