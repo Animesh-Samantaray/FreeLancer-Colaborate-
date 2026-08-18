@@ -9,6 +9,7 @@ import Task from "../models/Task.model.js";
 import Conversation from "../models/Conversation.model.js";
 import Message from "../models/Message.model.js";
 import { createAndSendNotification } from "../services/notification.service.js";
+import { checkAndAwardAchievements } from "../services/achievement.service.js";
 
 // Helper for cascade deleting all project assets (Proposals, Invitations, Milestones, Tasks, Conversations, Messages)
 const cascadeDeleteProjectData = async (projectId) => {
@@ -271,6 +272,18 @@ export const updateProject = async (req, res) => {
 
     if (oldStatus !== "Completed" && project.status === "Completed") {
       await updateProjectStatsOnCompletion(project, oldStatus);
+
+      // Safely check and award achievements for client and freelancers
+      try {
+        await checkAndAwardAchievements(project.client, "client");
+        if (project.freelancers && project.freelancers.length > 0) {
+          for (const freelancerId of project.freelancers) {
+            await checkAndAwardAchievements(freelancerId, "freelancer");
+          }
+        }
+      } catch (achError) {
+        console.error("Error checking achievements on project completion:", achError);
+      }
     }
 
     // Send PROJECT_APPROVED or PROJECT_REJECTED notification

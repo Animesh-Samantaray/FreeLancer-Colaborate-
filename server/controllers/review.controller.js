@@ -1,6 +1,7 @@
 import Review from "../models/Review.model.js";
 import FreelancerProfile from "../models/FreelancerProfile.model.js";
 import Project from "../models/Project.model.js";
+import { checkAndAwardAchievements } from "../services/achievement.service.js";
 
 export const createReview = async (req, res) => {
   try {
@@ -110,6 +111,13 @@ export const createReview = async (req, res) => {
         totalReviews,
       }
     );
+
+    // Safely check achievements for the reviewed freelancer
+    try {
+      await checkAndAwardAchievements(freelancerId, "freelancer");
+    } catch (achError) {
+      console.error("Error checking achievements on review creation:", achError);
+    }
 
     // Populate client information
     const populatedReview = await Review.findById(review._id)
