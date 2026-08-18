@@ -7,6 +7,7 @@ import {
 } from "../services/payment.service.js";
 import { createInvoiceFromPayment } from "../services/invoice.service.js";
 import { sendInvoiceSuccessEmail } from "../utils/sendMail.js";
+import { checkAndAwardAchievements } from "../services/achievement.service.js";
 
 export const createPaymentOrder = async (req, res) => {
   try {
@@ -149,6 +150,16 @@ export const verifyPayment = async (req, res) => {
         payment.freelancer = freelancerId;
         await payment.save();
       }
+    }
+
+    // Safely check achievements for client and freelancer
+    try {
+      await checkAndAwardAchievements(payment.client, "client");
+      if (payment.freelancer) {
+        await checkAndAwardAchievements(payment.freelancer, "freelancer");
+      }
+    } catch (achError) {
+      console.error("Error checking achievements on payment verification:", achError);
     }
 
     // Create the invoice (reuse existing if it exists)
