@@ -20,6 +20,7 @@ import Modal from "../../components/Modal";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import AchievementsSection from "../../components/achievements/AchievementsSection";
 import { useProfile } from "../../context/ProfileContext";
 
 function ClientProfile() {
@@ -150,7 +151,8 @@ function ClientProfile() {
         </div>
       </div>
 
-      {/* Company Description & Info */}
+      <AchievementsSection isOwnProfile={true} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <GlassCard hover={false} className="p-8 space-y-4">

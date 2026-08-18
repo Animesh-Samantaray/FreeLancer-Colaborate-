@@ -22,6 +22,7 @@ import Modal from "../../components/Modal";
 import PortfolioCard from "../../components/PortfolioCard";
 import SkeletonLoader from "../../components/SkeletonLoader";
 import ReviewsSection from "../../components/ReviewsSection";
+import AchievementsSection from "../../components/achievements/AchievementsSection";
 
 function FreelancerDirectory() {
   const { role } = useAuth();
@@ -338,7 +339,16 @@ function FreelancerDirectory() {
               </div>
             </div>
 
-            {/* Bio */}
+            <AchievementsSection
+              userId={
+                selectedFreelancer.user?._id ||
+                selectedFreelancer.user?.id ||
+                selectedFreelancer.user
+              }
+              isOwnProfile={false}
+              title="Earned Badges"
+            />
+
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-white">About</h4>
               <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
