@@ -393,9 +393,13 @@ export const getMyProjectsApi = async () => {
     }
     throw err;
   }
+};export const getMyAchievementsApi = async () => {
+  const response = await api.get("/achievements/my");
+  return response.data;
 };
 
-
-
-
+export const getUserAchievementsApi = async (userId) => {
+  const response = await api.get(`/achievements/user/${userId}`);
+  return response.data;
+};
 

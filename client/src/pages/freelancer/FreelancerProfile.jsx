@@ -28,6 +28,7 @@ import Button from "../../components/Button";
 import Input from "../../components/Input";
 import SkeletonLoader from "../../components/SkeletonLoader";
 import ReviewsSection from "../../components/ReviewsSection";
+import AchievementsSection from "../../components/achievements/AchievementsSection";
 import { useProfile } from "../../context/ProfileContext";
 
 function FreelancerProfile() {
@@ -248,7 +249,8 @@ function FreelancerProfile() {
         </div>
       </div>
 
-      {/* Main Grid Section */}
+      <AchievementsSection isOwnProfile={true} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Bio & Portfolio (2 cols) */}
         <div className="lg:col-span-2 space-y-8">

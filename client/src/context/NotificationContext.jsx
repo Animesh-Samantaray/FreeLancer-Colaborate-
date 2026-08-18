@@ -127,6 +127,9 @@ export const NotificationProvider = ({ children }) => {
       case "FILE_RECEIVED":
         path = notif.projectId ? `/messages/${notif.projectId}` : "/messages";
         break;
+      case "ACHIEVEMENT_UNLOCKED":
+        path = userRole === "client" ? "/client/profile" : "/freelancer/profile";
+        break;
       default:
         path = "/dashboard";
     }
@@ -134,15 +137,18 @@ export const NotificationProvider = ({ children }) => {
     navigate(path);
   }, [user, navigate]);
 
-  // Listen to Socket.IO and show toast + browser notifications
   const handleIncomingNotification = useCallback((notif) => {
     if (!notif) return;
 
-    // Filter out messages for the active conversation the user is looking at
+    if (notif.type === "ACHIEVEMENT_UNLOCKED") {
+      window.dispatchEvent(new CustomEvent("achievement_unlocked", { detail: notif }));
+    }
+
     const isCurrentChatSession =
       (notif.type === "MESSAGE_RECEIVED" || notif.type === "FILE_RECEIVED") &&
       notif.conversationId &&
       notif.conversationId === activeConversationIdRef.current;
+
 
     if (isCurrentChatSession) {
       return;

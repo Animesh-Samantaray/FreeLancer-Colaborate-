@@ -15,6 +15,7 @@ import Input from "../../components/Input";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import AchievementsSection from "../../components/achievements/AchievementsSection";
 
 function ClientDirectory() {
   const [clients, setClients] = useState([]);
@@ -233,7 +234,16 @@ function ClientDirectory() {
               </div>
             </div>
 
-            {/* Description */}
+            <AchievementsSection
+              userId={
+                selectedClient.user?._id ||
+                selectedClient.user?.id ||
+                selectedClient.user
+              }
+              isOwnProfile={false}
+              title="Earned Badges"
+            />
+
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-white">Company Overview</h4>
               <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">

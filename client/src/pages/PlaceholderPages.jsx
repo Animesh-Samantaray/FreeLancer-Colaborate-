@@ -10,6 +10,7 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import MilestonesSection from "../components/MilestonesSection";
 import ReviewsSection from "../components/ReviewsSection";
+import AchievementsSection from "../components/achievements/AchievementsSection";
 import { useProfile } from "../context/ProfileContext";
 import {
   FiFolder,
@@ -736,6 +737,8 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <AchievementsSection isOwnProfile={true} />
     </div>
   );
 }
