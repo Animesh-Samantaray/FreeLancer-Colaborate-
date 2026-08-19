@@ -183,7 +183,7 @@ function Dashboard() {
             {skillsList.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {skillsList.map((skill, index) => (
-                  <SkillBadge key={index} skill={skill} />
+                  <SkillBadge key={index} label={skill} />
                 ))}
               </div>
             ) : (
