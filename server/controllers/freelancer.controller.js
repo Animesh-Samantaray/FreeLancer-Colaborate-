@@ -5,7 +5,7 @@ import Proposal from "../models/Proposal.model.js";
 import Invitation from "../models/Invitation.model.js";
 import { uploadToCloudinary, deleteFromCloudinary, extractCloudinaryMetadata } from "../utils/cloudinaryUpload.js";
 import { extractResumeText } from "../services/resume.service.js";
-import { askGeminiModel } from "../services/ai.service.js";
+import { askGroqModel } from "../services/ai.service.js";
 
 export const getAllFreelancers = async (req, res) => {
   try {
@@ -403,6 +403,8 @@ export const uploadFreelancerResume = async (req, res) => {
   }
 };
 
+
+
 export const analyzeFreelancerProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -428,15 +430,15 @@ Analyze the following freelancer's profile and extracted resume text.
 Provide an objective evaluation including a completeness score, strengths, improvements (weaknesses), and actionable suggestions.
 
 Profile Details:
-- Title: \${freelancer.professionalTitle || "Not set"}
-- Bio: \${freelancer.bio || "Not set"}
-- Skills: \${freelancer.skills?.join(", ") || "None listed"}
-- Experience: \${freelancer.experience || 0} years
-- Hourly Rate: \$\${freelancer.hourlyRate || 0}/hr
-- Portfolio Projects: \${JSON.stringify(freelancer.portfolio || [])}
+- Title: ${freelancer.professionalTitle || "Not set"}
+- Bio: ${freelancer.bio || "Not set"}
+- Skills: ${freelancer.skills?.join(", ") || "None listed"}
+- Experience: ${freelancer.experience || 0} years
+- Hourly Rate: $${freelancer.hourlyRate || 0}/hr
+- Portfolio Projects: ${JSON.stringify(freelancer.portfolio || [])}
 
 Extracted Resume Text:
-\${freelancer.resumeData}
+${freelancer.resumeData}
 
 Based on this information, generate an analysis in JSON format.
 The JSON object MUST contain exactly these fields:
@@ -448,14 +450,15 @@ The JSON object MUST contain exactly these fields:
 
 Do not include any other fields. Return ONLY a valid JSON object. Do not include markdown code block syntax.`;
 
-    const rawResponse = await askGeminiModel(prompt);
+    // Updated to call Grok instead of Gemini
+    const rawResponse = await askGroqModel(prompt);
     
     // Clean and parse JSON response
     let cleanedResponse = rawResponse.trim();
     if (cleanedResponse.startsWith("```")) {
       cleanedResponse = cleanedResponse
-        .replace(/^```(?:json)?\\n?/i, "")
-        .replace(/\\n?```$/, "");
+        .replace(/^```(?:json)?\n?/i, "")
+        .replace(/\n?```$/, "");
     }
     cleanedResponse = cleanedResponse.trim();
 
@@ -463,7 +466,7 @@ Do not include any other fields. Return ONLY a valid JSON object. Do not include
     try {
       analysisData = JSON.parse(cleanedResponse);
     } catch (parseError) {
-      console.error("Failed to parse Gemini response as JSON:", rawResponse);
+      console.error("Failed to parse Grok response as JSON:", rawResponse);
       return res.status(500).json({
         success: false,
         message: "AI returned a malformed response. Please try again.",
