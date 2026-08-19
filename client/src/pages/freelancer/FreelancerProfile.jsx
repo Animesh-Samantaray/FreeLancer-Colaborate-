@@ -820,14 +820,41 @@ function FreelancerProfile() {
               icon={<FiGlobe />}
             />
 
-            <Input
-              label="Resume URL / PDF link"
-              name="resume"
-              value={formData.resume}
-              onChange={handleChange}
-              placeholder="https://example.com/resume.pdf"
-              icon={<FiFileText />}
-            />
+            <div className="flex flex-col">
+              <label className="block text-xs font-semibold text-gray-400 mb-2">
+                Resume File (PDF / DOCX)
+              </label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".pdf,.docx"
+                  onChange={handleResumeUpload}
+                  disabled={uploadingResume}
+                  className="hidden"
+                  id="modal-resume-file-input"
+                />
+                <label
+                  htmlFor="modal-resume-file-input"
+                  className={`flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 cursor-pointer transition text-sm text-gray-300 ${
+                    uploadingResume ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <FiFileText className="w-5 h-5 text-purple-400 shrink-0" />
+                    <span className="truncate">
+                      {uploadingResume
+                        ? "Uploading & extracting..."
+                        : formData.resume
+                        ? "Resume Uploaded (Click to change)"
+                        : "Upload Resume File (PDF/DOCX)"}
+                    </span>
+                  </div>
+                  {formData.resume && !uploadingResume && (
+                    <span className="text-xs text-emerald-400 font-bold shrink-0">✓ Ready</span>
+                  )}
+                </label>
+              </div>
+            </div>
           </div>
 
           {/* Portfolio Section Editor */}

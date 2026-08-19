@@ -192,7 +192,7 @@ export const updateFreelancerProfile = async (req, res) => {
     const freelancer = await FreelancerProfile.findOneAndUpdate(
       { user: userId },
       { $set: updateData },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
     ).populate("user", "fullName email avatar role");
 
     return res.status(200).json({
@@ -336,7 +336,7 @@ export const uploadFreelancerResume = async (req, res) => {
         },
       },
       {
-        new: true,
+        returnDocument: "after",
         upsert: true,
         setDefaultsOnInsert: true,
       }
