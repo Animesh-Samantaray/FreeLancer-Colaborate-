@@ -1,17 +1,25 @@
-import {GoogleGenerativeAI} from "@google/generative-ai";
+import OpenAI from "openai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
 });
 
-export const askGeminiModel= async(prompt)=>{
-try {
-    const result  = await model.generateContent(prompt);
-    return result.response.text();
-} catch (error) {
-    console.log(error);
-    throw new Error("Failed to generate AI response.");
-}
+export const askGroqModel = async (prompt) => {
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "openai/gpt-oss-20b",
+      messages: [
+        { role: "user", content: prompt }
+      ],
+     temperature: 0.3,                
+      max_completion_tokens: 800,     
+      reasoning_effort: "low",   
+    });
+    
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error("Groq API Error Details:", error);
+    throw new Error("Failed to generate AI response from Groq.");
+  }
 };

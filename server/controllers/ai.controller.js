@@ -1,4 +1,4 @@
-import { askGeminiModel } from "../services/ai.service.js";
+import { askGroqModel } from "../services/ai.service.js";
 import fs from 'fs';
 import path from 'path';
 
@@ -35,7 +35,7 @@ User Question:
 ${question}
 `;
 
-const answer = await askGeminiModel(finalPrompt);
+const answer = await askGroqModelGrokModel(finalPrompt);
 console.log(answer);
 return res.status(200).json({
       success: true,
