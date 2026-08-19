@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import {
@@ -136,7 +137,7 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
         mode: "cors",
         credentials: "omit",
       });
-      if (!res.ok) throw new Error("Network response was not ok");
+      if (!res.ok) throw new Error(`Network response was not ok: ${res.status} ${res.statusText}`);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -147,15 +148,9 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.warn("Blob fetch download failed, using fallback tab-based download:", err);
-      const link = document.createElement("a");
-      link.href = attachment.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.download = attachment.originalName || "download";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      console.warn("Blob fetch download failed:", err);
+      toast.error("Download blocked. Please check Cloudinary dashboard settings to allow raw PDF delivery.");
+      window.open(attachment.url, "_blank", "noopener,noreferrer");
     } finally {
       if (messageId) {
         setDownloadingIds((prev) => {
@@ -295,7 +290,7 @@ const MediaGallery = ({ messages = [], onSelectMedia, onJumpToMessage }) => {
                 <div
                   key={item.id || idx}
                   onClick={() => {
-                    downloadAttachment(item.attachment, item.id);
+                    onSelectMedia && onSelectMedia(item.attachment, item.senderName, item.createdAt, idx, filteredItems);
                   }}
                   className="group p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition flex items-center justify-between gap-4 shadow-md cursor-pointer select-none"
                 >

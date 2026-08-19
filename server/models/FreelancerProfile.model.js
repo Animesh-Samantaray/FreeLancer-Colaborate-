@@ -73,6 +73,31 @@ const freelancerProfileSchema = new mongoose.Schema(
       default: "",
     },
 
+    resumePublicId: {
+      type: String,
+      default: "",
+    },
+
+    resumeResourceType: {
+      type: String,
+      default: "",
+    },
+
+    resumeOriginalName: {
+      type: String,
+      default: "",
+    },
+
+    resumeMimeType: {
+      type: String,
+      default: "",
+    },
+
+    resumeFormat: {
+      type: String,
+      default: "",
+    },
+
     resumeData: {
       type: String,
       default: "",

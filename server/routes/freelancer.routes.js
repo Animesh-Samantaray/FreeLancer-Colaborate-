@@ -11,6 +11,7 @@ import {
   isProfileCompleted,
   uploadFreelancerResume,
   analyzeFreelancerProfile,
+  downloadFreelancerResumeFile,
 } from "../controllers/freelancer.controller.js";
 
 const router = express.Router();
@@ -63,5 +64,6 @@ router.post(
 // Public (authenticated users)
 router.get("/", authMiddleware, getAllFreelancers);
 router.get("/:id", authMiddleware, getFreelancerById);
+router.get("/:id/resume/download", authMiddleware, downloadFreelancerResumeFile);
 
 export default router;

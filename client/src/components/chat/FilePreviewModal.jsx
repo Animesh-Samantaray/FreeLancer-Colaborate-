@@ -51,7 +51,7 @@ const FilePreviewModal = ({
         mode: "cors",
         credentials: "omit",
       });
-      if (!res.ok) throw new Error("Network response was not ok");
+      if (!res.ok) throw new Error(`Network response was not ok: ${res.status} ${res.statusText}`);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -62,15 +62,9 @@ const FilePreviewModal = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.warn("Blob fetch download failed, using fallback tab-based download:", err);
-      const link = document.createElement("a");
-      link.href = attachment.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.download = attachment.originalName || "download";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      console.warn("Blob fetch download failed:", err);
+      toast.error("Download blocked. Please check Cloudinary dashboard settings to allow raw PDF delivery.");
+      window.open(attachment.url, "_blank", "noopener,noreferrer");
     } finally {
       setIsDownloading(false);
     }
@@ -213,7 +207,45 @@ const FilePreviewModal = ({
             </div>
           )}
 
-          {!isImage && !isVideo && (
+          {isPdf ? (
+            <div className="w-full h-full flex flex-col items-center justify-center p-2">
+              <object
+                data={attachment.url}
+                type="application/pdf"
+                className="w-full h-[70vh] rounded-2xl border border-white/10"
+              >
+                <iframe
+                  src={attachment.url}
+                  className="w-full h-[70vh] rounded-2xl border border-white/10"
+                  title="PDF Preview"
+                >
+                  <div className="p-8 max-w-md w-full rounded-3xl bg-white/5 border border-white/10 text-center flex flex-col items-center shadow-2xl">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600/20 to-blue-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-3xl mb-4 shadow-xl shadow-indigo-500/10">
+                      <FiFileText />
+                    </div>
+                    <h4 className="text-base font-bold text-white mb-1 font-display break-all">
+                      {attachment.originalName || "Document"}
+                    </h4>
+                    <p className="text-xs text-gray-400 mb-6">
+                      {formatFileSize(attachment.size)} • {mime || "Unknown format"}
+                    </p>
+                    <p className="text-sm text-red-400 mb-6 font-semibold">
+                      Unable to preview this PDF directly.
+                    </p>
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-xs font-semibold text-white shadow-lg shadow-indigo-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <FiExternalLink className="w-4 h-4" />
+                      <span>Open PDF in New Tab</span>
+                    </a>
+                  </div>
+                </iframe>
+              </object>
+            </div>
+          ) : (
             <div className="p-8 max-w-md w-full rounded-3xl bg-white/5 border border-white/10 text-center flex flex-col items-center shadow-2xl">
               <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600/20 to-blue-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-3xl mb-4 shadow-xl shadow-indigo-500/10">
                 <FiFileText />
