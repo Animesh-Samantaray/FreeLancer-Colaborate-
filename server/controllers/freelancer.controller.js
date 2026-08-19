@@ -46,28 +46,28 @@ export const getAllFreelancers = async (req, res) => {
 };
 
 
-export const getFreelancerById=async(req,res)=>{
-    try {
-        const id=req.query.id;
-        const freelancer = await FreelancerProfile.findById(id).populate("user","fullName avatar role")
-        if(!freelancer){
-            return res.status(404).json({
-                success:false,
-                message:"Freelancer not found"
-            })
-        }
-        return res.status(200).json({
-            success:true,
-            freelancer,
-        })
-    } catch (error) {
-        console.error("Get Freelancer By Id Error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-        });
+export const getFreelancerById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const freelancer = await FreelancerProfile.findById(id).populate("user", "fullName avatar role")
+    if (!freelancer) {
+      return res.status(404).json({
+        success: false,
+        message: "Freelancer not found"
+      })
     }
+    return res.status(200).json({
+      success: true,
+      freelancer,
+    })
+  } catch (error) {
+    console.error("Get Freelancer By Id Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 }
 
 
@@ -230,6 +230,47 @@ export const getMyProjects = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
+    });
+  }
+};
+
+
+export const isProfileCompleted = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const freelancer = await FreelancerProfile.findOne({
+      user: userId,
+    });
+
+   
+    if (!freelancer) {
+      return res.status(200).json({
+        success: true,
+        profileCompleted: false,
+      });
+    }
+
+    const hasResume = Boolean(freelancer.resume?.trim());
+
+    const hasPortfolio =
+      Array.isArray(freelancer.portfolio) &&
+      freelancer.portfolio.some(
+        (item) => item?.title?.trim() && item?.link?.trim()
+      );
+
+    const profileCompleted = hasResume && hasPortfolio;
+
+    return res.status(200).json({
+      success: true,
+      profileCompleted,
+    });
+  } catch (error) {
+    console.error("Check Freelancer Profile Completion Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to check profile completion.",
     });
   }
 };

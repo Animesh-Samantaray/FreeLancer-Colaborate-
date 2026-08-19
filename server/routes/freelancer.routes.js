@@ -8,6 +8,7 @@ import {
   getAllFreelancers,
   getFreelancerById,
   getMyProjects,
+  isProfileCompleted,
 } from "../controllers/freelancer.controller.js";
 
 const router = express.Router();
@@ -32,6 +33,13 @@ router.get(
   authMiddleware,
   authorizeRoles("freelancer", "admin"),
   getMyProjects
+);
+
+router.get(
+  "/profile/completion",
+  authMiddleware,
+  authorizeRoles("freelancer", "admin"),
+  isProfileCompleted
 );
 
 // Public (authenticated users)
