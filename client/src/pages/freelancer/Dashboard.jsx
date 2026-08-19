@@ -77,6 +77,10 @@ function Dashboard() {
   const experienceYears = profile?.experience ? `${profile.experience} Yrs` : "0 Yrs";
   const skillsList = profile?.skills || [];
 
+  const hasResume = Boolean(profile?.resume?.trim());
+  const hasPortfolio = Array.isArray(profile?.portfolio) && profile.portfolio.some(p => p?.title?.trim() && p?.link?.trim());
+  const isComplete = hasResume && hasPortfolio;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Error Alert if API fetch fails */}
@@ -89,6 +93,28 @@ function Dashboard() {
           <Button variant="secondary" size="sm" icon={<FiRefreshCw />} onClick={refetchProfile}>
             Retry
           </Button>
+        </div>
+      )}
+
+      {/* Profile Completeness Nudge Banner */}
+      {!profileLoading && !isComplete && (
+        <div className="glass-card border border-amber-500/20 bg-amber-500/10 p-6 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-amber-200 animate-in slide-in-from-top duration-500">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-amber-500/20 rounded-2xl text-amber-400 shrink-0">
+              <FiAlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Complete Your Profile</h4>
+              <p className="text-xs text-gray-300 mt-1">
+                You must upload your resume and add at least one portfolio project to complete your profile and unlock all features.
+              </p>
+            </div>
+          </div>
+          <Link to="/freelancer/profile" className="shrink-0 w-full sm:w-auto">
+            <Button variant="secondary" size="sm" className="w-full justify-center">
+              Go to Profile
+            </Button>
+          </Link>
         </div>
       )}
 

@@ -27,7 +27,7 @@ const freelancerProfileSchema = new mongoose.Schema(
 
     experience: {
       type: Number,
-      default: 0, 
+      default: 0,
     },
 
     hourlyRate: {
@@ -72,6 +72,35 @@ const freelancerProfileSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    resumeData: {
+      type: String,
+      default: "",
+    },
+
+    resumeUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    aiProfileAnalysis: [
+      {
+        overallScore: {
+          type: Number,
+          default: 0,
+        },
+
+        result: {
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
+        },
+
+        analyzedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     availability: {
       type: String,

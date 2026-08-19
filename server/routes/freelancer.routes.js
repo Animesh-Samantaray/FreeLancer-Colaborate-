@@ -1,7 +1,7 @@
 import express from "express";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/role.middleware.js";
-
+import upload from "../middlewares/upload.middleware.js";
 import {
   getFreelancerProfile,
   updateFreelancerProfile,
@@ -9,6 +9,8 @@ import {
   getFreelancerById,
   getMyProjects,
   isProfileCompleted,
+  uploadFreelancerResume,
+  analyzeFreelancerProfile,
 } from "../controllers/freelancer.controller.js";
 
 const router = express.Router();
@@ -40,6 +42,22 @@ router.get(
   authMiddleware,
   authorizeRoles("freelancer", "admin"),
   isProfileCompleted
+);
+
+
+router.post(
+  "/profile/resume",
+  authMiddleware,
+  authorizeRoles("freelancer", "admin"),
+  upload.single("resume"),
+  uploadFreelancerResume
+);
+
+router.post(
+  "/profile/analyze",
+  authMiddleware,
+  authorizeRoles("freelancer", "admin"),
+  analyzeFreelancerProfile
 );
 
 // Public (authenticated users)

@@ -1,12 +1,20 @@
 import cloudinary from "../configs/cloudinary.js";
 
-export const uploadToCloudinary = (file) => {
+
+export const uploadToCloudinary = (
+  file,
+  folder = "freelancer-platform/chat"
+) => {
   return new Promise((resolve, reject) => {
+    if (!file || !file.buffer) {
+      return reject(new Error("File is required."));
+    }
+
     const resourceType = getResourceType(file.mimetype);
 
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: "freelancer-platform/chat",
+        folder,
         resource_type: resourceType,
       },
       (error, result) => {
@@ -21,6 +29,7 @@ export const uploadToCloudinary = (file) => {
     uploadStream.end(file.buffer);
   });
 };
+
 
 export const deleteFromCloudinary = async (
   publicId,
