@@ -23,7 +23,7 @@ export const ProfileProvider = ({ children }) => {
     }
 
     try {
-      setLoading(true);
+      if (!profile) setLoading(true);
       setError(null);
 
       if (role === "client") {
@@ -36,7 +36,7 @@ export const ProfileProvider = ({ children }) => {
       } else if (role === "freelancer") {
         setCompletionLoading(true);
         try {
-          const compRes = await api.get("/freelancers/profile/completion");
+          const compRes = await api.get("/freelancer/profile/completion");
           if (compRes.data?.success) {
             setProfileCompleted(Boolean(compRes.data.profileCompleted));
           }

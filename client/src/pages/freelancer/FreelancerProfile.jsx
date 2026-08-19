@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   FiCheckCircle,
@@ -17,6 +18,7 @@ import {
   FiLink,
   FiEdit3,
   FiAlertCircle,
+  FiArrowRight,
 } from "react-icons/fi";
 import api from "../../api/axios";
 import ProfileHeader from "../../components/ProfileHeader";
@@ -46,7 +48,7 @@ function FreelancerProfile() {
       ? profile.aiProfileAnalysis[profile.aiProfileAnalysis.length - 1]
       : null;
 
-  // Form State
+
   const [formData, setFormData] = useState({
     professionalTitle: "",
     bio: "",
@@ -70,14 +72,21 @@ function FreelancerProfile() {
   const [newPortfolioLink, setNewPortfolioLink] = useState("");
 
   const handleResumeUpload = async (e) => {
-    const file = e.target.files[0];
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    const file = e?.target?.files?.[0];
     if (!file) return;
 
     const allowedTypes = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword"
     ];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedExts = [".pdf", ".docx"];
+    const fileExt = file.name.toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExts.some(ext => fileExt.endsWith(ext))) {
       toast.error("Please upload only PDF or DOCX resume files.");
       return;
     }
@@ -110,7 +119,10 @@ function FreelancerProfile() {
     }
   };
 
-  const runAIAnalysis = async () => {
+  const runAIAnalysis = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
     try {
       setAnalyzingProfile(true);
       const res = await api.post("/freelancer/profile/analyze");
@@ -527,8 +539,8 @@ function FreelancerProfile() {
                       {latestAnalysis.overallScore >= 80
                         ? "Excellent profile quality"
                         : latestAnalysis.overallScore >= 60
-                        ? "Good, but has room to grow"
-                        : "Requires attention"}
+                          ? "Good, but has room to grow"
+                          : "Requires attention"}
                     </p>
                   </div>
                 </div>
@@ -574,26 +586,41 @@ function FreelancerProfile() {
                   </div>
                 )}
 
-                <Button
-                  onClick={runAIAnalysis}
-                  className="w-full text-xs py-2"
-                  variant="secondary"
-                >
-                  Re-audit Profile
-                </Button>
+                <div className="pt-2 flex flex-col gap-2">
+                  <Link to="/freelancer/resume-analytics" className="w-full">
+                    <Button className="w-full text-xs py-2" icon={<FiArrowRight />}>
+                      View Full Resume Analytics
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={runAIAnalysis}
+                    className="w-full text-xs py-2"
+                    variant="secondary"
+                  >
+                    Re-audit Profile
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-6 space-y-4">
                 <p className="text-xs text-gray-400">
                   Analyze your profile data and resume text using Gemini AI to find gaps and optimize for recruiters.
                 </p>
-                <Button
-                  onClick={runAIAnalysis}
-                  className="w-full text-xs py-2"
-                  disabled={!profile?.resumeData}
-                >
-                  Analyze with AI
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Link to="/freelancer/resume-analytics" className="w-full">
+                    <Button className="w-full text-xs py-2" icon={<FiArrowRight />}>
+                      Open Resume Analytics Dashboard
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={runAIAnalysis}
+                    className="w-full text-xs py-2"
+                    variant="secondary"
+                    disabled={!profile?.resumeData}
+                  >
+                    Analyze with AI
+                  </Button>
+                </div>
                 {!profile?.resumeData && (
                   <p className="text-[10px] text-red-400">
                     * Please upload your resume file first to enable AI analysis.
@@ -835,9 +862,8 @@ function FreelancerProfile() {
                 />
                 <label
                   htmlFor="modal-resume-file-input"
-                  className={`flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 cursor-pointer transition text-sm text-gray-300 ${
-                    uploadingResume ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`flex items-center justify-between gap-3 p-3 rounded-2xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 cursor-pointer transition text-sm text-gray-300 ${uploadingResume ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                 >
                   <div className="flex items-center gap-2 truncate">
                     <FiFileText className="w-5 h-5 text-purple-400 shrink-0" />
@@ -845,8 +871,8 @@ function FreelancerProfile() {
                       {uploadingResume
                         ? "Uploading & extracting..."
                         : formData.resume
-                        ? "Resume Uploaded (Click to change)"
-                        : "Upload Resume File (PDF/DOCX)"}
+                          ? "Resume Uploaded (Click to change)"
+                          : "Upload Resume File (PDF/DOCX)"}
                     </span>
                   </div>
                   {formData.resume && !uploadingResume && (

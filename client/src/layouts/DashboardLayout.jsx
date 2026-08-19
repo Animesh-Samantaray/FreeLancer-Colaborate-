@@ -44,6 +44,7 @@ function DashboardLayout() {
       ? [
           { path: "/freelancer", label: "Dashboard", icon: FiGrid },
           { path: "/freelancer/profile", label: "My Profile", icon: FiUser },
+          { path: "/freelancer/resume-analytics", label: "Resume Analytics", icon: FiBarChart2 },
           { path: "/freelancer/my-projects", label: "My Projects", icon: FiFolder },
           { path: "/invoices", label: "Invoices", icon: FiFileText },
           { path: "/messages", label: "Project Chat", icon: FiMessageSquare },

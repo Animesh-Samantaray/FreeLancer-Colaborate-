@@ -23,6 +23,7 @@ import MyProject from "./pages/client/MyProject";
 // Freelancer Pages
 import FreelancerDashboard from "./pages/freelancer/Dashboard";
 import FreelancerProfile from "./pages/freelancer/FreelancerProfile";
+import ResumeAnalytics from "./pages/freelancer/ResumeAnalytics";
 import FreelancerDirectory from "./pages/freelancer/FreelancerDirectory";
 import BrowseProjects from "./pages/freelancer/BrowseProjects";
 import ProjectDetails from "./pages/freelancer/ProjectDetails";
@@ -174,6 +175,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["freelancer"]}>
                 <FreelancerProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/freelancer/resume-analytics"
+            element={
+              <ProtectedRoute allowedRoles={["freelancer", "admin"]}>
+                <ResumeAnalytics />
               </ProtectedRoute>
             }
           />
