@@ -1,9 +1,10 @@
 import React from "react";
 
-const SkillBadge = ({ label, onRemove }) => {
+const SkillBadge = ({ label, skill, onRemove }) => {
+  const displayLabel = label || skill;
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-gray-200 backdrop-blur-md transition hover:border-[#6366F1]/30 hover:bg-[#6366F1]/10">
-      <span>{label}</span>
+      <span>{displayLabel}</span>
       {onRemove && (
         <button
           type="button"

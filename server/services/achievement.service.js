@@ -135,24 +135,24 @@ const checkFreelancerAchievements = async (userId) => {
         break;
 
       case "ELITE_FREELANCER":
-        qualifies = (await getCompletedProjects()) >= 5;
+        qualifies = Math.max(profile.completedProjects || 0, await getCompletedProjects()) >= 5;
         break;
 
       case "RELIABLE_PROFESSIONAL":
-        qualifies = (await getCompletedProjects()) >= 2 && (await getCancelledProjects()) === 0;
+        qualifies = Math.max(profile.completedProjects || 0, await getCompletedProjects()) >= 2 && (await getCancelledProjects()) === 0;
         break;
 
       case "HIGH_EARNER":
-        qualifies = (await getTotalEarnings()) >= 100;
+        qualifies = Math.max(profile.totalEarnings || 0, await getTotalEarnings()) >= 100;
         break;
 
       case "EXPERIENCED_FREELANCER":
-        qualifies = (profile.experience || 0) >= 3 && (await getCompletedProjects()) >= 4;
+        qualifies = (profile.experience || 0) >= 3 && Math.max(profile.completedProjects || 0, await getCompletedProjects()) >= 4;
         break;
 
       case "HIGHLY_RECOMMENDED": {
         const freelancerReviews = await getReviews();
-        const total = freelancerReviews.length;
+        const total = Math.max(profile.totalReviews || 0, freelancerReviews.length);
         if (total >= 20) {
           const positive = freelancerReviews.filter((r) => r.rating >= 4).length;
           qualifies = (positive / total * 100) >= 90;
@@ -205,7 +205,6 @@ const checkClientAchievements = async (userId) => {
 
   if (badgesToEvaluate.length === 0) return [];
 
-  // Local caching variables to avoid duplicate queries
   let completedProjectsCount = null;
   let completedHiresCount = null;
   let totalSpending = null;
@@ -247,11 +246,11 @@ const checkClientAchievements = async (userId) => {
 
     switch (badgeKey) {
       case "TRUSTED_CLIENT":
-        qualifies = (await getCompletedProjects()) >= 2;
+        qualifies = Math.max(profile.completedProjects || 0, await getCompletedProjects()) >= 2;
         break;
 
       case "PREMIUM_CLIENT":
-        qualifies = (await getTotalSpending()) >= 300;
+        qualifies = Math.max(profile.totalSpent || 0, await getTotalSpending()) >= 300;
         break;
 
       case "TOP_RATED_CLIENT":
@@ -259,11 +258,11 @@ const checkClientAchievements = async (userId) => {
         break;
 
       case "RELIABLE_EMPLOYER":
-        qualifies = (await getCompletedHires()) >= 3;
+        qualifies = Math.max(profile.completedProjects || 0, profile.totalHires || 0, await getCompletedHires()) >= 3;
         break;
 
       case "PREFERRED_CLIENT":
-        qualifies = (await getCompletedProjects()) >= 3 && (profile.averageRating || 0) >= 4.5;
+        qualifies = Math.max(profile.completedProjects || 0, await getCompletedProjects()) >= 3 && (profile.averageRating || 0) >= 4.5;
         break;
     }
 

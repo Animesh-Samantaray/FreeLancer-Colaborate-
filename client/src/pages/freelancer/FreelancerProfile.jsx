@@ -16,6 +16,7 @@ import {
   FiTrash2,
   FiLink,
   FiEdit3,
+  FiAlertCircle,
 } from "react-icons/fi";
 import api from "../../api/axios";
 import ProfileHeader from "../../components/ProfileHeader";
@@ -32,7 +33,7 @@ import AchievementsSection from "../../components/achievements/AchievementsSecti
 import { useProfile } from "../../context/ProfileContext";
 
 function FreelancerProfile() {
-  const { refetchProfile } = useProfile();
+  const { refetchProfile, profileCompleted } = useProfile();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -203,7 +204,14 @@ function FreelancerProfile() {
     try {
       setSaving(true);
 
-      // Parse comma-separated skills and languages
+      let finalPortfolio = [...formData.portfolio];
+      if (newPortfolioTitle.trim() && newPortfolioLink.trim()) {
+        finalPortfolio.push({
+          title: newPortfolioTitle.trim(),
+          link: newPortfolioLink.trim(),
+        });
+      }
+
       const parsedSkills = formData.skillsInput
         .split(",")
         .map((s) => s.trim())
@@ -227,12 +235,32 @@ function FreelancerProfile() {
         website: formData.website,
         resume: formData.resume,
         availability: formData.availability,
-        portfolio: formData.portfolio,
+        portfolio: finalPortfolio,
       };
 
       const res = await api.put("/freelancer/profile", payload);
       if (res.data?.freelancer) {
-        setProfile(res.data.freelancer);
+        const p = res.data.freelancer;
+        setProfile(p);
+        setFormData({
+          professionalTitle: p.professionalTitle || "",
+          bio: p.bio || "",
+          skills: p.skills || [],
+          skillsInput: (p.skills || []).join(", "),
+          experience: p.experience || 0,
+          hourlyRate: p.hourlyRate || 0,
+          location: p.location || "",
+          languages: p.languages || [],
+          languagesInput: (p.languages || []).join(", "),
+          github: p.github || "",
+          linkedin: p.linkedin || "",
+          website: p.website || "",
+          resume: p.resume || "",
+          availability: p.availability || "Available",
+          portfolio: p.portfolio || [],
+        });
+        setNewPortfolioTitle("");
+        setNewPortfolioLink("");
         toast.success(res.data.message || "Freelancer profile updated successfully!");
         await refetchProfile();
         setIsEditModalOpen(false);
@@ -255,7 +283,39 @@ function FreelancerProfile() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Header Banner */}
+      {profileCompleted === false && (
+        <div className="p-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-xl space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                <FiAlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-amber-300 font-display">
+                  Profile Completion Required
+                </h3>
+                <p className="text-xs text-gray-300 mt-0.5">
+                  To unlock full access to the platform, you must submit a resume link and at least one valid portfolio item.
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => setIsEditModalOpen(true)} className="shrink-0 text-xs py-2 px-4">
+              Complete Setup Now
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-amber-500/20">
+            <div className={`flex items-center gap-2 text-xs font-semibold ${profile?.resume?.trim() ? "text-emerald-400" : "text-amber-400"}`}>
+              {profile?.resume?.trim() ? <FiCheckCircle className="w-4 h-4 text-emerald-400" /> : <FiAlertCircle className="w-4 h-4 text-amber-400" />}
+              <span>Resume Link: {profile?.resume?.trim() ? "Submitted" : "Required"}</span>
+            </div>
+            <div className={`flex items-center gap-2 text-xs font-semibold ${Array.isArray(profile?.portfolio) && profile.portfolio.some(i => i?.title?.trim() && i?.link?.trim()) ? "text-emerald-400" : "text-amber-400"}`}>
+              {Array.isArray(profile?.portfolio) && profile.portfolio.some(i => i?.title?.trim() && i?.link?.trim()) ? <FiCheckCircle className="w-4 h-4 text-emerald-400" /> : <FiAlertCircle className="w-4 h-4 text-amber-400" />}
+              <span>Portfolio Project: {Array.isArray(profile?.portfolio) && profile.portfolio.some(i => i?.title?.trim() && i?.link?.trim()) ? "Submitted" : "At least 1 item required (Title & Link)"}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ProfileHeader
         title={profile?.user?.fullName || "Freelancer Name"}
         subtitle={profile?.professionalTitle || "Freelancer Title"}

@@ -403,3 +403,9 @@ export const getUserAchievementsApi = async (userId) => {
   return response.data;
 };
 
+export const getProfileCompletionApi = async () => {
+  const response = await api.get("/freelancers/profile/completion");
+  return response.data;
+};
+
+

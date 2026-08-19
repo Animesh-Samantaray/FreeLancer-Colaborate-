@@ -1,10 +1,12 @@
 import { NavLink } from "react-router-dom";
 import { FiLogOut, FiChevronLeft } from "react-icons/fi";
+import { useProfile } from "../context/ProfileContext";
 
 const Sidebar = ({ user, items, isOpen, onClose, onLogout }) => {
+  const { profileCompleted } = useProfile();
+
   return (
     <>
-      {/* Mobile backdrop */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -17,7 +19,6 @@ const Sidebar = ({ user, items, isOpen, onClose, onLogout }) => {
         }`}
       >
         <div className="flex h-full flex-col px-5 py-6 overflow-hidden">
-          {/* Top Header - Fixed */}
           <div className="shrink-0 flex items-center justify-between gap-3 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-3xl bg-gradient-to-tr from-[#6366F1] to-[#3B82F6] flex items-center justify-center shadow-xl shadow-indigo-500/15">
@@ -37,22 +38,28 @@ const Sidebar = ({ user, items, isOpen, onClose, onLogout }) => {
             </button>
           </div>
 
-          {/* Navigation Links - Scrollable Middle */}
           <nav className="flex-1 overflow-y-auto space-y-2 pr-1">
             {items.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `group flex items-center gap-3 rounded-3xl px-4 py-3 text-sm font-medium transition duration-300 ${
+                  `group flex items-center justify-between gap-3 rounded-3xl px-4 py-3 text-sm font-medium transition duration-300 ${
                     isActive
                       ? "bg-gradient-to-r from-[#6366F1]/20 to-[#3B82F6]/15 text-white ring-1 ring-[#6366F1]/20"
                       : "text-gray-400 hover:text-white hover:bg-white/5"
                   }`
                 }
               >
-                <item.icon className="w-5 h-5 shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <div className="flex items-center gap-3 truncate">
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {user?.role === "freelancer" && item.path === "/freelancer/profile" && profileCompleted === false && (
+                  <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/30">
+                    Required
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>
