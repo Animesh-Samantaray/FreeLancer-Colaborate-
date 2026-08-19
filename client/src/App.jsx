@@ -54,10 +54,16 @@ import {
   SettingsPage,
 } from "./pages/PlaceholderPages";
 
+import { useProfile } from "./context/ProfileContext";
+
 const RoleDashboardRedirect = () => {
   const { role } = useAuth();
+  const { profileCompleted } = useProfile();
   if (role === "client") return <Navigate to="/client" replace />;
-  if (role === "freelancer") return <Navigate to="/freelancer" replace />;
+  if (role === "freelancer") {
+    if (profileCompleted === false) return <Navigate to="/freelancer/profile" replace />;
+    return <Navigate to="/freelancer" replace />;
+  }
   if (role === "admin") return <Navigate to="/admin" replace />;
   return <Navigate to="/login" replace />;
 };

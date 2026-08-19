@@ -1,17 +1,23 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useProfile } from "../context/ProfileContext";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { loading, user, role } = useAuth();
+  const { profileCompleted, completionLoading } = useProfile();
+  const location = useLocation();
 
   const getRolePath = () => {
     if (role === "client") return "/client";
-    if (role === "freelancer") return "/freelancer";
+    if (role === "freelancer") {
+      if (profileCompleted === false) return "/freelancer/profile";
+      return "/freelancer";
+    }
     if (role === "admin") return "/admin";
     return "/login";
   };
 
-  if (loading) {
+  if (loading || (user && role === "freelancer" && completionLoading)) {
     return (
       <div className="min-h-screen bg-[#09090B] flex flex-col justify-center items-center relative overflow-hidden bg-gradient-mesh">
         <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-[#6366F1]/5 rounded-full blur-[100px] pointer-events-none" />
@@ -38,6 +44,10 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (allowedRoles && !allowedRoles.includes(role)) {
     return <Navigate to={getRolePath()} replace />;
+  }
+
+  if (role === "freelancer" && profileCompleted === false && location.pathname !== "/freelancer/profile") {
+    return <Navigate to="/freelancer/profile" replace />;
   }
 
   return children;
