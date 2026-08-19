@@ -3,6 +3,9 @@ import User from "../models/User.model.js";
 import Project from "../models/Project.model.js";
 import Proposal from "../models/Proposal.model.js";
 import Invitation from "../models/Invitation.model.js";
+import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+import { extractResumeText } from "../services/resume.service.js";
+import { askGeminiModel } from "../services/ai.service.js";
 
 export const getAllFreelancers = async (req, res) => {
   try {
@@ -184,7 +187,6 @@ export const updateFreelancerProfile = async (req, res) => {
     if (linkedin !== undefined) updateData.linkedin = linkedin;
     if (website !== undefined) updateData.website = website;
     if (portfolio !== undefined) updateData.portfolio = portfolio;
-    if (resume !== undefined) updateData.resume = resume;
     if (availability !== undefined) updateData.availability = availability;
 
     const freelancer = await FreelancerProfile.findOneAndUpdate(
@@ -271,6 +273,179 @@ export const isProfileCompleted = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to check profile completion.",
+    });
+  }
+};
+
+
+
+export const uploadFreelancerResume = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Resume file is required.",
+      });
+    }
+
+    const allowedMimeTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only PDF and DOCX resumes are supported.",
+      });
+    }
+
+    // Extract resume text before/independently of Cloudinary storage.
+    const resumeData = await extractResumeText(req.file);
+
+    if (!resumeData) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Unable to extract text from the resume. Please upload a readable PDF or DOCX file.",
+      });
+    }
+
+    // Upload resume to Cloudinary.
+    const cloudinaryResult = await uploadToCloudinary(
+      req.file,
+      "freelancer-platform/resumes"
+    );
+
+    if (!cloudinaryResult?.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: "Resume upload failed.",
+      });
+    }
+
+    const freelancer = await FreelancerProfile.findOneAndUpdate(
+      { user: userId },
+      {
+        $set: {
+          resume: cloudinaryResult.secure_url,
+          resumeData,
+          resumeUpdatedAt: new Date(),
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      }
+    ).populate("user", "fullName email avatar role");
+
+    return res.status(200).json({
+      success: true,
+      message: "Resume uploaded successfully.",
+      resume: freelancer.resume,
+      resumeUpdatedAt: freelancer.resumeUpdatedAt,
+      freelancer,
+    });
+  } catch (error) {
+    console.error("Upload Freelancer Resume Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload resume.",
+    });
+  }
+};
+
+export const analyzeFreelancerProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const freelancer = await FreelancerProfile.findOne({ user: userId });
+
+    if (!freelancer) {
+      return res.status(404).json({
+        success: false,
+        message: "Freelancer profile not found.",
+      });
+    }
+
+    if (!freelancer.resumeData?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload your resume file (PDF/DOCX) first to run AI profile analysis.",
+      });
+    }
+
+    const prompt = `You are an expert technical recruiter and resume reviewer.
+Analyze the following freelancer's profile and extracted resume text.
+Provide an objective evaluation including a completeness score, strengths, improvements (weaknesses), and actionable suggestions.
+
+Profile Details:
+- Title: \${freelancer.professionalTitle || "Not set"}
+- Bio: \${freelancer.bio || "Not set"}
+- Skills: \${freelancer.skills?.join(", ") || "None listed"}
+- Experience: \${freelancer.experience || 0} years
+- Hourly Rate: \$\${freelancer.hourlyRate || 0}/hr
+- Portfolio Projects: \${JSON.stringify(freelancer.portfolio || [])}
+
+Extracted Resume Text:
+\${freelancer.resumeData}
+
+Based on this information, generate an analysis in JSON format.
+The JSON object MUST contain exactly these fields:
+1. "overallScore": A number from 0 to 100 representing the completeness and quality of the profile.
+2. "strengths": An array of strings highlighting the key professional strengths.
+3. "improvements": An array of strings pointing out gaps, inconsistencies, or areas of improvement in the profile or resume.
+4. "suggestions": An array of strings detailing concrete steps the freelancer can take to improve their profile/resume and attract more clients.
+5. "feedback": A brief summary paragraph of the analysis.
+
+Do not include any other fields. Return ONLY a valid JSON object. Do not include markdown code block syntax.`;
+
+    const rawResponse = await askGeminiModel(prompt);
+    
+    // Clean and parse JSON response
+    let cleanedResponse = rawResponse.trim();
+    if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse
+        .replace(/^```(?:json)?\\n?/i, "")
+        .replace(/\\n?```$/, "");
+    }
+    cleanedResponse = cleanedResponse.trim();
+
+    let analysisData;
+    try {
+      analysisData = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error("Failed to parse Gemini response as JSON:", rawResponse);
+      return res.status(500).json({
+        success: false,
+        message: "AI returned a malformed response. Please try again.",
+      });
+    }
+
+    // Append to aiProfileAnalysis list
+    const newAnalysis = {
+      overallScore: Number(analysisData.overallScore) || 0,
+      result: analysisData,
+      analyzedAt: new Date(),
+    };
+
+    freelancer.aiProfileAnalysis.push(newAnalysis);
+    await freelancer.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "AI Profile Analysis completed successfully.",
+      analysis: newAnalysis,
+    });
+  } catch (error) {
+    console.error("Analyze Freelancer Profile Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to run AI profile analysis.",
     });
   }
 };

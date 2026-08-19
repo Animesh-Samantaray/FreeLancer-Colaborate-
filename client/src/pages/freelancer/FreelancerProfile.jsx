@@ -37,6 +37,13 @@ function FreelancerProfile() {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [analyzingProfile, setAnalyzingProfile] = useState(false);
+
+  const latestAnalysis =
+    profile?.aiProfileAnalysis && profile.aiProfileAnalysis.length > 0
+      ? profile.aiProfileAnalysis[profile.aiProfileAnalysis.length - 1]
+      : null;
 
   // Form State
   const [formData, setFormData] = useState({
@@ -60,6 +67,70 @@ function FreelancerProfile() {
   // Portfolio Item state for modal
   const [newPortfolioTitle, setNewPortfolioTitle] = useState("");
   const [newPortfolioLink, setNewPortfolioLink] = useState("");
+
+  const handleResumeUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload only PDF or DOCX resume files.");
+      return;
+    }
+
+    try {
+      setUploadingResume(true);
+      const formDataUpload = new FormData();
+      formDataUpload.append("resume", file);
+
+      const res = await api.post("/freelancer/profile/resume", formDataUpload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (res.data?.success) {
+        toast.success("Resume uploaded and parsed successfully!");
+        setProfile(res.data.freelancer);
+        setFormData((prev) => ({
+          ...prev,
+          resume: res.data.resume || "",
+        }));
+        await refetchProfile();
+      }
+    } catch (err) {
+      console.error("Resume upload error:", err);
+      toast.error(err.response?.data?.message || "Failed to upload and parse resume.");
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
+  const runAIAnalysis = async () => {
+    try {
+      setAnalyzingProfile(true);
+      const res = await api.post("/freelancer/profile/analyze");
+      if (res.data?.success) {
+        toast.success("AI Profile Analysis completed successfully!");
+        setProfile((prev) => ({
+          ...prev,
+          aiProfileAnalysis: [
+            ...(prev?.aiProfileAnalysis || []),
+            res.data.analysis,
+          ],
+        }));
+        await refetchProfile();
+      }
+    } catch (err) {
+      console.error("AI analysis error:", err);
+      toast.error(err.response?.data?.message || "Failed to run AI profile analysis.");
+    } finally {
+      setAnalyzingProfile(false);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -337,6 +408,141 @@ function FreelancerProfile() {
 
         {/* Right Column: Social Links & Contact Details */}
         <div className="space-y-6">
+          {/* AI Profile Analysis */}
+          <GlassCard hover={false} className="p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="text-lg font-bold text-white font-display flex items-center gap-2">
+                <FiActivity className="w-5 h-5 text-[#6366F1]" />
+                AI Profile Audit
+              </h3>
+              {latestAnalysis && (
+                <span className="text-xs text-gray-400">
+                  Last run: {new Date(latestAnalysis.analyzedAt).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+
+            {analyzingProfile ? (
+              <div className="py-8 flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 rounded-full border-4 border-t-purple-500 border-r-indigo-500 border-b-blue-500 border-l-transparent animate-spin"></div>
+                <p className="text-sm font-semibold text-gray-300 animate-pulse">
+                  Analyzing profile & resume text...
+                </p>
+                <p className="text-xs text-gray-500">Evaluating marketability & alignment</p>
+              </div>
+            ) : latestAnalysis ? (
+              <div className="space-y-4">
+                {/* Score */}
+                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+                  <div className="relative flex items-center justify-center shrink-0 w-16 h-16">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-white/10"
+                        strokeWidth="3.5"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845
+                          a 15.9155 15.9155 0 0 1 0 31.831
+                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="text-[#6366F1]"
+                        strokeDasharray={`${latestAnalysis.overallScore}, 100`}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="none"
+                        d="M18 2.0845
+                          a 15.9155 15.9155 0 0 1 0 31.831
+                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute text-base font-extrabold text-white">
+                      {latestAnalysis.overallScore}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Completeness Score</h4>
+                    <p className="text-xs text-gray-400">
+                      {latestAnalysis.overallScore >= 80
+                        ? "Excellent profile quality"
+                        : latestAnalysis.overallScore >= 60
+                        ? "Good, but has room to grow"
+                        : "Requires attention"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Feedback */}
+                {latestAnalysis.result?.feedback && (
+                  <p className="text-xs text-gray-300 italic bg-white/5 p-3 rounded-xl border border-white/5">
+                    "{latestAnalysis.result.feedback}"
+                  </p>
+                )}
+
+                {/* Strengths */}
+                {latestAnalysis.result?.strengths?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">
+                      Strengths
+                    </p>
+                    <ul className="space-y-1">
+                      {latestAnalysis.result.strengths.slice(0, 3).map((s, i) => (
+                        <li key={i} className="text-xs text-emerald-400 flex items-start gap-1.5">
+                          <span className="shrink-0 mt-0.5">✓</span>
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Improvements */}
+                {latestAnalysis.result?.improvements?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">
+                      Areas to Improve
+                    </p>
+                    <ul className="space-y-1">
+                      {latestAnalysis.result.improvements.slice(0, 3).map((imp, i) => (
+                        <li key={i} className="text-xs text-amber-400 flex items-start gap-1.5">
+                          <span className="shrink-0 mt-0.5">⚠</span>
+                          <span>{imp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <Button
+                  onClick={runAIAnalysis}
+                  className="w-full text-xs py-2"
+                  variant="secondary"
+                >
+                  Re-audit Profile
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-6 space-y-4">
+                <p className="text-xs text-gray-400">
+                  Analyze your profile data and resume text using Gemini AI to find gaps and optimize for recruiters.
+                </p>
+                <Button
+                  onClick={runAIAnalysis}
+                  className="w-full text-xs py-2"
+                  disabled={!profile?.resumeData}
+                >
+                  Analyze with AI
+                </Button>
+                {!profile?.resumeData && (
+                  <p className="text-[10px] text-red-400">
+                    * Please upload your resume file first to enable AI analysis.
+                  </p>
+                )}
+              </div>
+            )}
+          </GlassCard>
+
           <GlassCard hover={false} className="p-6 space-y-4">
             <h3 className="text-lg font-bold text-white font-display pb-3 border-b border-white/10">
               Links & Attachments
@@ -380,16 +586,52 @@ function FreelancerProfile() {
               ) : null}
 
               {profile?.resume ? (
-                <a
-                  href={profile.resume.startsWith("http") ? profile.resume : `https://${profile.resume}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 transition text-sm text-emerald-400 font-medium"
-                >
-                  <FiFileText className="w-5 h-5 text-emerald-400" />
-                  <span className="truncate">Download Resume</span>
-                </a>
-              ) : null}
+                <div className="space-y-2">
+                  <a
+                    href={profile.resume.startsWith("http") ? profile.resume : `https://${profile.resume}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 transition text-sm text-emerald-400 font-medium"
+                  >
+                    <FiFileText className="w-5 h-5 text-emerald-400" />
+                    <span className="truncate">Download Resume</span>
+                  </a>
+                  <div className="pt-1">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx"
+                      onChange={handleResumeUpload}
+                      disabled={uploadingResume}
+                      className="hidden"
+                      id="resume-file-update"
+                    />
+                    <label
+                      htmlFor="resume-file-update"
+                      className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-dashed border-white/10 hover:border-white/30 cursor-pointer transition text-xs text-gray-400 hover:text-white"
+                    >
+                      {uploadingResume ? "Uploading & Extracting..." : "Update Resume (PDF/DOCX)"}
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-1">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={handleResumeUpload}
+                    disabled={uploadingResume}
+                    className="hidden"
+                    id="resume-file-upload"
+                  />
+                  <label
+                    htmlFor="resume-file-upload"
+                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 cursor-pointer transition text-xs text-gray-400 text-center"
+                  >
+                    <FiFileText className="w-6 h-6 text-purple-400" />
+                    <span>{uploadingResume ? "Uploading & Extracting..." : "Upload Resume (PDF/DOCX)"}</span>
+                  </label>
+                </div>
+              )}
 
               {!profile?.github && !profile?.linkedin && !profile?.website && !profile?.resume && (
                 <p className="text-xs text-gray-500 py-2">No links added yet.</p>
