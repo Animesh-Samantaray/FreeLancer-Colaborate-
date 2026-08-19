@@ -3,7 +3,7 @@ import User from "../models/User.model.js";
 import Project from "../models/Project.model.js";
 import Proposal from "../models/Proposal.model.js";
 import Invitation from "../models/Invitation.model.js";
-import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+import { uploadToCloudinary, deleteFromCloudinary, extractCloudinaryMetadata } from "../utils/cloudinaryUpload.js";
 import { extractResumeText } from "../services/resume.service.js";
 import { askGeminiModel } from "../services/ai.service.js";
 
@@ -36,7 +36,7 @@ export const getAllFreelancers = async (req, res) => {
     return res.status(200).json({
       success: true,
       count: freelancers.length,
-      freelancers,
+      freelancers: formatFreelancersList(req, freelancers),
     });
   } catch (error) {
     console.error("Get All Freelancers Error:", error);
@@ -61,7 +61,7 @@ export const getFreelancerById = async (req, res) => {
     }
     return res.status(200).json({
       success: true,
-      freelancer,
+      freelancer: formatFreelancerResponse(req, freelancer),
     })
   } catch (error) {
     console.error("Get Freelancer By Id Error:", error);
@@ -142,7 +142,7 @@ export const getFreelancerProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      freelancer,
+      freelancer: formatFreelancerResponse(req, freelancer),
     });
   } catch (error) {
     console.error("Get Freelancer Profile Error:", error);
@@ -198,7 +198,7 @@ export const updateFreelancerProfile = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Freelancer profile updated successfully.",
-      freelancer,
+      freelancer: formatFreelancerResponse(req, freelancer),
     });
   } catch (error) {
     console.error("Update Freelancer Profile Error:", error);
@@ -313,6 +313,12 @@ export const uploadFreelancerResume = async (req, res) => {
       });
     }
 
+    // Fetch current profile to get old resume details before uploading new one
+    const existingProfile = await FreelancerProfile.findOne({ user: userId });
+    const oldResumeUrl = existingProfile?.resume;
+    const oldPublicId = existingProfile?.resumePublicId;
+    const oldResourceType = existingProfile?.resumeResourceType;
+
     // Upload resume to Cloudinary.
     const cloudinaryResult = await uploadToCloudinary(
       req.file,
@@ -331,6 +337,11 @@ export const uploadFreelancerResume = async (req, res) => {
       {
         $set: {
           resume: cloudinaryResult.secure_url,
+          resumePublicId: cloudinaryResult.public_id,
+          resumeResourceType: cloudinaryResult.resource_type,
+          resumeOriginalName: req.file.originalname,
+          resumeMimeType: req.file.mimetype,
+          resumeFormat: cloudinaryResult.format,
           resumeData,
           resumeUpdatedAt: new Date(),
         },
@@ -342,12 +353,45 @@ export const uploadFreelancerResume = async (req, res) => {
       }
     ).populate("user", "fullName email avatar role");
 
+    // Clean up old Cloudinary file now that new upload is stored in DB
+    if (oldResumeUrl) {
+      let deletePublicId = oldPublicId;
+      let deleteResourceType = oldResourceType;
+
+      if (!deletePublicId) {
+        // Fallback: parse from URL if metadata wasn't stored in the database yet
+        const parsed = extractCloudinaryMetadata(oldResumeUrl);
+        if (parsed) {
+          deletePublicId = parsed.publicId;
+          deleteResourceType = parsed.resourceType;
+        }
+      }
+
+      if (deletePublicId) {
+        console.log(`🧹 Deleting old resume from Cloudinary: ${deletePublicId} (${deleteResourceType || "raw"})...`);
+        try {
+          await deleteFromCloudinary(deletePublicId, deleteResourceType || "raw");
+        } catch (cleanupError) {
+          console.error("Failed to clean up old Cloudinary resume file:", cleanupError);
+        }
+      }
+    }
+
+    const formattedFreelancer = formatFreelancerResponse(req, freelancer);
     return res.status(200).json({
       success: true,
       message: "Resume uploaded successfully.",
-      resume: freelancer.resume,
+      resume: formattedFreelancer.resume,
+      resumeMetadata: {
+        url: freelancer.resume,
+        publicId: freelancer.resumePublicId,
+        resourceType: freelancer.resumeResourceType,
+        originalName: freelancer.resumeOriginalName,
+        mimeType: freelancer.resumeMimeType,
+        format: freelancer.resumeFormat,
+      },
       resumeUpdatedAt: freelancer.resumeUpdatedAt,
-      freelancer,
+      freelancer: formattedFreelancer,
     });
   } catch (error) {
     console.error("Upload Freelancer Resume Error:", error);
@@ -448,4 +492,72 @@ Do not include any other fields. Return ONLY a valid JSON object. Do not include
       message: "Failed to run AI profile analysis.",
     });
   }
+};
+
+export const downloadFreelancerResumeFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const freelancer = await FreelancerProfile.findById(id);
+    if (!freelancer || !freelancer.resume) {
+      return res.status(404).json({
+        success: false,
+        message: "Resume not found.",
+      });
+    }
+
+    let publicId = freelancer.resumePublicId;
+    let resourceType = freelancer.resumeResourceType || "raw";
+
+    if (!publicId) {
+      const parsed = extractCloudinaryMetadata(freelancer.resume);
+      if (parsed) {
+        publicId = parsed.publicId;
+        resourceType = parsed.resourceType;
+      }
+    }
+
+    if (!publicId) {
+      return res.redirect(freelancer.resume);
+    }
+
+    const path = (await import("path")).default;
+    const ext = path.extname(freelancer.resumeOriginalName || freelancer.resume).replace(".", "") || "pdf";
+
+    const { default: cloudinary } = await import("../configs/cloudinary.js");
+    const signedUrl = cloudinary.utils.private_download_url(publicId, ext, {
+      resource_type: resourceType,
+      type: "upload",
+      expires_at: Math.floor(Date.now() / 1000) + 600,
+    });
+
+    const axios = (await import("axios")).default;
+    const response = await axios.get(signedUrl, { responseType: "stream" });
+
+    res.setHeader("Content-Type", freelancer.resumeMimeType || "application/pdf");
+    const filename = freelancer.resumeOriginalName || `resume-${id}.${ext}`;
+    const download = req.query.download === "true";
+    res.setHeader("Content-Disposition", `${download ? "attachment" : "inline"}; filename="${filename}"`);
+
+    response.data.pipe(res);
+  } catch (error) {
+    console.error("Download Freelancer Resume Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to download resume.",
+    });
+  }
+};
+
+export const formatFreelancerResponse = (req, freelancerDoc) => {
+  if (!freelancerDoc) return null;
+  const freelancer = freelancerDoc.toObject ? freelancerDoc.toObject({ virtuals: true }) : { ...freelancerDoc };
+  if (freelancer.resume) {
+    freelancer.resume = `${req.protocol}://${req.get("host")}/api/freelancer/${freelancer._id}/resume/download`;
+  }
+  return freelancer;
+};
+
+export const formatFreelancersList = (req, freelancersList) => {
+  if (!freelancersList || !Array.isArray(freelancersList)) return [];
+  return freelancersList.map((f) => formatFreelancerResponse(req, f));
 };
