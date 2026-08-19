@@ -84,7 +84,7 @@ export const updateClientProfile = async (req, res) => {
     const profile = await ClientProfile.findOneAndUpdate(
       { user: userId },
       { $set: updateData },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
     ).populate("user", "fullName email avatar role");
 
     return res.status(200).json({
