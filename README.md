@@ -1,107 +1,202 @@
-# Freelancer Collaboration Platform
+# Freelancer Collaboration Platform 🚀
 
-Welcome to the Freelancer Collaboration Platform! This repository contains a full-stack real-time collaboration application designed for clients and freelancers. It supports real-time project chatting, task boards, milestones management, and invitations.
+Welcome to the **Freelancer Collaboration Platform**—a production-grade, real-time workspace that connects clients and freelancers. This repository provides a complete full-stack environment enabling users to manage projects, submit proposals, track milestones, assign tasks, complete secure payments, download PDF invoices, and collaborate through real-time chat. 
+
+The platform is supercharged with a floating **Multilingual Voice AI Assistant** that supports Speech-to-Text (STT) and Text-to-Speech (TTS) inside the browser across five regional languages.
 
 ---
 
-## 💻 Tech Stack
+## 💻 Tech Stack & Integrations
 
 ### Frontend
-- **Framework:** React 19 (via Vite)
-- **Styling:** CSS3 & Tailwind CSS v4 (using glassmorphic properties)
-- **Icons:** React Icons (`react-icons/fi`)
-- **Real-Time:** Socket.IO Client
-- **API Client:** Axios
+- **Framework:** React 19 (Vite-powered, Hot Module Replacement)
+- **Styling:** CSS3 & Tailwind CSS v4 (Glassmorphic properties, custom dark-theme tokens)
+- **Icons:** React Icons (`react-icons/fi`, `react-icons/bs`, `react-icons/hi2`)
+- **Real-Time Integration:** Socket.IO Client
+- **API Client:** Axios (configured with request/response interceptors)
+- **Utilities:** `jspdf` & `jspdf-autotable` (Invoice Generation), `xlsx` (Excel Exporting)
 
 ### Backend
-- **Framework:** Express (Node.js)
-- **Database:** MongoDB (via Mongoose)
-- **File Storage:** Cloudinary
-- **Real-Time:** Socket.IO Server
-- **File Upload Middleware:** Multer
+- **Framework:** Express (Node.js REST API server)
+- **Database:** MongoDB Atlas (handled via Mongoose schemas)
+- **Real-Time Communication:** Socket.IO Server
+- **File Upload Middleware:** Multer (with mime-type and limit filtering)
+- **Cloud Storage:** Cloudinary integration for attachments and profiles
+- **Authentication:** JWT, Cookie-Parser, Google OAuth 2.0 (Passport.js)
+- **AI Engine:** Google Gemini SDK & Groq API Integrations
 
 ---
 
-## 🚀 Newly Implemented Features
+## 🌟 Platform Features & How They Work
 
-### 1. Fixed & Integrated Chat Attachments (End-to-End)
-- **Inline Preview:** Selecting a file displays a preview card (thumbnail for images, folder/file card for documents) directly inside the composer.
-- **Multipart Form Uploads:** Fixed an Axios interceptor bug that hardcoded `Content-Type: application/json` for all requests, which previously broke `FormData` serialization. Clear boundaries are now sent automatically.
-- **Multer Error Catching:** Route middleware wraps `upload.single("file")` to catch upload limits or disallowed mime type errors gracefully, returning clean JSON 400 responses instead of standard raw HTML crashes.
-- **Cloudinary Integration:** Fully wired. Endpoints save the file's correct secure URL, original name, mimetype, size, and its returned Cloudinary `resource_type` (saved to `attachment.resourceType` inside MongoDB).
-- **Socket.IO Emits:** Complete messages (with attachment metadata) are broadcasted in real time. Both sender and receiver see updates immediately.
+### 1. Authentication & Role-Based Access Control (RBAC)
+- **Local Credentials:** Dynamic secure login, registration, password hashing (bcrypt), forgot-password, and reset-password utility flows.
+- **Social Login:** Configured OAuth2.0 authentication flow with Google Passport strategies.
+- **Access Control:** Route protection guards secure access permissions for:
+  - `client`: Project creators, milestone assigners, and invoice payers.
+  - `freelancer`: Bidders, task executors, resume builders, and achievement collectors.
+  - `admin`: Global dashboard controllers, system reports managers, and user auditors.
 
-### 2. Fully Responsive Chat Layout
-- **Desktop (>= 1280px):** Sideloaded three-column layout (Sidebar navigation | Conversation list | Active conversation).
-- **Tablet (768px - 1280px):** Sideloaded two-column view (Sidebar closed inside layout toggle | Active conversation visible). The conversation list is collapsed by default and can be toggled via a new header button (`FiMessageSquare`), sliding out as a premium drawer overlay from the left with a backdrop.
-- **Mobile (< 768px):** Single column primary view. Displays the Chat List if no chat is active. When a chat is active, the chat room occupies the full screen, and a "Back" button allows users to navigate back to the list. The toggle button is also available to slide open the drawer.
-- **Chat Bubbles & Cards:** Set fluid maximum widths (`max-w-full xs:max-w-xs sm:max-w-sm`) for images and document boxes inside messages to prevent layout overflow on very small devices.
+### 2. Client Module (Project & Bid Management)
+- **Project Composer:** Clients publish public or private projects, configuring budgets, deadliness, skills checklists, and description details.
+- **Proposal Review:** Interactive boards to inspect freelancer proposals (bid amount, cover letters, custom milestones).
+- **Hiring Pipeline:** Accept or reject proposals. Accepting triggers automated project assignment.
+- **Milestone Engine:** Clients structure project milestones with customized release amounts. Payments are routed dynamically through Razorpay checkout overlays.
+
+### 3. Freelancer Module (Bidding, Resume & Gamification)
+- **Project Board:** Search and filter public listings matching required skill sets.
+- **Proposal Submissions:** Detail bids, delivery durations, and list expected milestones.
+- **Resume Analytics:** Interactive parser that summarizes uploaded CVs and highlights core skills.
+- **Gamified Achievements:** Unlocks achievements dynamically (e.g. Profile Setup, First Bid, Milestone Completion) tracked on the user profile.
+- **Freelancer/Client Directories:** Easily search profiles, view client ratings, and browse freelancer hourly rates.
+
+### 4. Real-Time Chat & Secure File Sharing
+- **Real-time Rooms:** Socket.IO handles communication rooms mapped to projects.
+- **Inline Composer Previews:** Users preview files (thumbnail cards for images, file cards for docs) in the composer before uploading.
+- **Cloud Upload Handlers:** Multer interceptors forward uploads securely to Cloudinary, generating CDN links, original filenames, mime types, and size logs stored in Mongoose database logs.
+- **Socket Broadcasts:** Complete message structures are broadcasted in real-time, instantly rendering previews for active users.
+
+### 5. Multilingual Voice-Enabled AI Assistant (FAB)
+- **Central Language Configuration:** Controls speech patterns through the `SPEECH_LANGUAGES` mapper:
+  - **English** (`en-IN`)
+  - **Hindi** (`hi-IN`)
+- **Speech-to-Text (STT):** Translates spoken sentences dynamically using browser-native SpeechRecognition based on the active language dropdown.
+- **Text-to-Speech (TTS):** WebSpeech synthesis searches native browser voices (`window.speechSynthesis.getVoices()`) matching the language code to ensure proper pronunciation, with fallback locales.
+- **Audio Context Syncing:** Saves language choices to `localStorage`. Clears active speech loops when switching languages.
+- **Unread Counter:** Floating widget indicates active responses with a badge that clears upon panel expansion.
+
+### 6. Billing, Payments & Document Engines
+- **Razorpay Checkout:** Milestone payouts trigger the Razorpay SDK checkout overlay, executing verification Webhooks on the server.
+- **Automated PDF Invoices:** Auto-generates clean, professional invoice receipts with grid layouts using `jspdf` and `jspdf-autotable`.
+- **Logs Exporter:** Freelancers and clients export invoice tables directly to `.xlsx` files using `xlsx` spreadsheet sheets.
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-├── client/                 # React frontend application
+├── client/                      # React Frontend Application
 │   ├── src/
-│   │   ├── api/            # API configurations & services (axios instance)
-│   │   ├── components/     # Reusable components (chat bubble, list, composer)
-│   │   ├── context/        # React Auth and Notification Contexts
-│   │   ├── layouts/        # Dashboard layout wrapping sidebar & navbar
-│   │   ├── pages/          # Dashboard pages (ProjectChatPage, Profile, etc.)
-│   │   └── services/       # Socket.IO client setup
+│   │   ├── api/                 # API client configurations (Axios base configuration)
+│   │   ├── components/          # Reusable shared components
+│   │   │   ├── ai/              # AI chatbot UI & Speech recognition scripts
+│   │   │   ├── chat/            # Chat room drawers, composer, and message cards
+│   │   │   └── landing/         # Marketing landing elements (Hero, FAQ, Testimonials)
+│   │   ├── context/             # Authentication, Notification, and Profile states
+│   │   ├── layouts/             # Shared Dashboard layouts (Navbar & Sidebar)
+│   │   ├── pages/               # Functional pages (Dashboards, Directory lists)
+│   │   ├── routes/              # Protected routes & role-guards
+│   │   └── services/            # Socket.IO connection configurations
+│   ├── index.html               # Main entry HTML
+│   ├── vite.config.js           # Vite development configs
 │   └── package.json
-└── server/                 # Express backend application
-    ├── configs/            # Database and Socket.IO configurations
-    ├── controllers/        # Controllers (message.controller, etc.)
-    ├── middlewares/        # Middlewares (upload, auth, role)
-    ├── models/             # Mongoose schemas (Message, User, etc.)
-    ├── routes/             # Express endpoints
-    └── server.js           # Server bootstrap
+└── server/                      # Express Backend Server Application
+    ├── configs/                 # DB connectors, Passport OAuth, and Socket.IO configs
+    ├── controllers/             # Request handlers (auth, payments, chat, AI controller)
+    ├── middlewares/             # JWT auth validations, multer configurations
+    ├── models/                  # Mongoose MongoDB schemas
+    ├── routes/                  # Express Router endpoint definitions
+    ├── utils/                   # Shared validation utilities
+    ├── server.js                # Server main entrypoint
+    └── package.json
 ```
 
 ---
 
-## 🛠️ Getting Started
+## 🛠️ Installation & Setup Guide
 
 ### 1. Prerequisites
-- Node.js installed (v18+ recommended)
-- MongoDB account/URI
-- Cloudinary account
+- **Node.js:** v18+ recommended
+- **Database:** MongoDB connection URI (Local or Atlas)
+- **Accounts:** Cloudinary (File Uploads), Razorpay Dashboard (Payments), Google Developer Console (OAuth)
 
-### 2. Setup Backend Environment
-Create a `.env` file in the `/server` directory with the following configuration:
+### 2. Environment Variables Configuration
+
+#### Backend Env (`server/.env`)
+Create a `.env` file in the `/server` directory:
 ```env
 PORT=5000
-MONGO_URI=your_mongodb_connection_string
+NODE_ENV=development
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/freelancer_platform
 CLIENT_URL=http://localhost:5173
-JWT_SECRET=your_jwt_secret
+
+# Security Credentials
+JWT_SECRET=your_jwt_secret_token
+SESSION_SECRET=your_session_secret_token
+
+# Passport OAuth
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+
+# Mailer Configurations
+EMAIL_USER=your_email_account@gmail.com
+EMAIL_PASS=your_email_app_passcode
+
+# Cloudinary CDN Storage
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# Payment Integration
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_key_secret
+
+# AI Models Integration
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=gsk_your_groq_api_key
 ```
 
-### 3. Run the Applications
-Navigate to individual project folders to install dependencies and run:
+#### Frontend Env (`client/.env`)
+Create a `.env` file in the `/client` directory:
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_RAZORPAY_KEY_ID=rzp_test_your_key_id
+```
 
-#### Start Backend Server
+### 3. Execution Commands
+
+#### Step A: Run the Backend Server
 ```bash
 cd server
 npm install
 npm run dev
 ```
+*Server launches by default on [http://localhost:5000](http://localhost:5000)*
 
-#### Start Frontend Client
+#### Step B: Run the Client Application
 ```bash
 cd client
 npm install
 npm run dev
 ```
+*Client starts by default on [http://localhost:5173](http://localhost:5173)*
 
 ---
 
-## 🌐 Website & Developer Details
+## 🌐 API Endpoint Specifications
 
-- **Website URL (Local Development):** [http://localhost:5173](http://localhost:5173)
-- **Developer Name:** Animesh Samantaray
-- **Repository Path:** `Animesh-Samantaray/FreeLancer-Colaborate-`
+The backend exposes these REST routes:
+
+| Module | Route Prefix | Primary Endpoints |
+|---|---|---|
+| **Auth** | `/api/auth` | `POST /register`, `POST /login`, `GET /logout`, `POST /forgot-password`, `POST /reset-password` |
+| **Projects** | `/api/project` | `POST /`, `GET /`, `GET /my`, `PUT /:id`, `DELETE /:id` |
+| **Proposals** | `/api/proposal` | `POST /`, `GET /my`, `GET /project/:projectId`, `PUT /:id` (Accept/Reject) |
+| **Invitations** | `/api/invitation` | `POST /`, `GET /my`, `PUT /:id` |
+| **Milestones** | `/api/milestone` | `POST /`, `GET /project/:projectId`, `PATCH /:id/status` |
+| **Tasks** | `/api/task` | `POST /`, `GET /milestone/:milestoneId`, `PATCH /:id/status` |
+| **Payments** | `/api/payments` | `POST /create-order`, `POST /verify`, `GET /my-payments` |
+| **Invoices** | `/api/invoices` | `POST /create`, `GET /my-invoices`, `GET /:id` |
+| **Chat & Info**| `/api/message` | `POST /:conversationId`, `GET /:conversationId`, `PATCH /read/:messageId` |
+| **AI Assistant**| `/api/ai` | `POST /chat` |
+
+---
+
+## ⚡ Socket.IO Event Mappings
+
+Real-time interactions utilize the following events:
+- **`join_project` (client-to-server):** Freelancers or clients subscribe to chat rooms matching their assigned project.
+- **`send_message` (client-to-server):** Forwards message payload (text and Cloudinary attachments) to the server.
+- **`receive_message` (server-to-client):** Broadcasts incoming messages instantly to all room participants.
+- **`typing` (client-to-server):** Emits status alerts showing "X is typing..." indicators inside the active window.

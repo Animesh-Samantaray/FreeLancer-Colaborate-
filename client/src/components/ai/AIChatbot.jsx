@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   FiSend,
   FiMic,
@@ -20,11 +20,93 @@ import MarkdownRenderer from "./MarkdownRenderer";
 import { useAuth } from "../../context/AuthContext";
 
 
+const SPEECH_LANGUAGES = {
+  en: {
+    label: "English",
+    speechCode: "en-IN",
+    ttsCode: "en-IN",
+  },
+  hi: {
+    label: "हिन्दी",
+    speechCode: "hi-IN",
+    ttsCode: "hi-IN",
+  },
+};
+
+const generateMessageId = (prefix) => {
+  return `${prefix}-${Date.now()}`;
+};
+
+const getFormattedTimestamp = () => {
+  return new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const detectLanguage = (text) => {
+  if (!text) return "en-IN";
+
+  // Unicode Range for Hindi (Devanagari script) detection
+  if (/[\u0900-\u097F]/.test(text)) {
+    return "hi-IN";
+  }
+
+  return "en-IN"; // Default fallback
+};
+
+
+const getBestVoice = (language) => {
+  if (!("speechSynthesis" in window)) {
+    return null;
+  }
+  const voices = window.speechSynthesis.getVoices();
+
+  if (!voices || !voices.length) {
+    return null;
+  }
+
+  const targetLang = language.toLowerCase();
+
+  // 1. Try exact requested language 
+  const exactMatch = voices.find(
+    (voice) => voice.lang.toLowerCase() === targetLang ||
+               voice.lang.toLowerCase().replace("_", "-") === targetLang
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  // 2. Try language-only prefix match
+  const languageMatch = voices.find(
+    (voice) =>
+      voice.lang.toLowerCase().startsWith(targetLang.split("-")[0])
+  );
+
+  if (languageMatch) {
+    return languageMatch;
+  }
+
+  // 3. Try Indian regional voice preference fallback
+  if (targetLang.endsWith("-in")) {
+    const indianVoice = voices.find(
+      (voice) => voice.lang.toLowerCase().endsWith("-in") ||
+                 voice.lang.toLowerCase().replace("_", "-").endsWith("-in")
+    );
+    if (indianVoice) return indianVoice;
+  }
+
+  // 4. Graceful fallback 
+  return null;
+};
+
 const INITIAL_WELCOME_MESSAGE = {
   id: "welcome-1",
   sender: "ai",
   text: "Hello! I am your AI Assistant. How can I help you with your projects, proposals, invoices, or tasks today?",
-  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  timestamp: getFormattedTimestamp(),
+  langKey: "en",
 };
 
 const SUGGESTED_PROMPTS = [
@@ -44,6 +126,16 @@ export default function AIChatbot() {
   const [speakingMessageId, setSpeakingMessageId] = useState(null);
   const [hasUnread, setHasUnread] = useState(false);
 
+  // Initialize selected language from localStorage or default to "en"
+  const [selectedLangKey, setSelectedLangKey] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ai_chat_selected_language");
+      return saved && SPEECH_LANGUAGES[saved] ? saved : "en";
+    } catch {
+      return "en";
+    }
+  });
+
   // Initialize messages from sessionStorage if available
   const [messages, setMessages] = useState(() => {
     try {
@@ -57,6 +149,8 @@ export default function AIChatbot() {
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
   const inputRef = useRef(null);
+  const isListeningRef = useRef(isListening);
+  const spokenMessagesRef = useRef(new Set());
 
   // Sync messages to sessionStorage
   useEffect(() => {
@@ -67,6 +161,61 @@ export default function AIChatbot() {
     }
   }, [messages]);
 
+  // Sync selected language key to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("ai_chat_selected_language", selectedLangKey);
+    } catch (e) {
+      console.error("Failed to save selected language:", e);
+    }
+  }, [selectedLangKey]);
+
+  // Sync isListening state to ref to avoid dependency warnings
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  // Load Speech Synthesis Voices asynchronously (pre-warm cache for browser support)
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      console.log("Available TTS voices:", voices);
+    };
+
+    loadVoices();
+
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
+  // Stop speech synthesis helper (declared early for effect dependencies)
+  const stopSpeech = useCallback(() => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeakingMessageId(null);
+  }, []);
+
+  // Stop speech/listening when language changes
+  useEffect(() => {
+    const handleLangChange = () => {
+      stopSpeech();
+      if (isListeningRef.current && recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      }
+    };
+    const timer = setTimeout(handleLangChange, 0);
+    return () => clearTimeout(timer);
+  }, [selectedLangKey, stopSpeech]);
+
   // Scroll to bottom on new message
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,7 +224,6 @@ export default function AIChatbot() {
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
-      setHasUnread(false);
     }
   }, [isOpen, messages, loading]);
 
@@ -88,7 +236,7 @@ export default function AIChatbot() {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = "en-US";
+      recognition.lang = "en-IN";
 
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results)
@@ -116,8 +264,17 @@ export default function AIChatbot() {
   }, []);
 
   // Text-to-Speech Helper (TTS)
-  const speakText = (text, messageId) => {
+  const speakText = useCallback((text, messageId) => {
+    if (!text?.trim() || !messageId) return;
+
+    // Avoid duplicate speech
+    if (spokenMessagesRef.current.has(messageId)) {
+      console.log(`Message ${messageId} has already been spoken. Skipping duplicate.`);
+      return;
+    }
+
     if (!("speechSynthesis" in window)) {
+      console.warn("Speech synthesis is not supported.");
       toast.error("Text-to-speech is not supported in your browser.");
       return;
     }
@@ -132,9 +289,26 @@ export default function AIChatbot() {
 
     if (!cleanText) return;
 
+    // Detect language dynamically using Unicode script ranges
+    const language = detectLanguage(cleanText);
     const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = language;
+
+    const voice = getBestVoice(language);
+    if (voice) {
+      utterance.voice = voice;
+    }
+
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
+
+    // Debugging logs as requested
+    const voices = window.speechSynthesis.getVoices();
+    console.log("Detected language:", language);
+    console.log("Selected voice:", voice);
+    console.log("Available voices:", voices);
+
+    spokenMessagesRef.current.add(messageId);
 
     utterance.onstart = () => {
       setSpeakingMessageId(messageId);
@@ -149,14 +323,7 @@ export default function AIChatbot() {
     };
 
     window.speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeech = () => {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setSpeakingMessageId(null);
-  };
+  }, []);
 
   // Toggle Speech-to-Text Listening
   const toggleListening = () => {
@@ -171,6 +338,7 @@ export default function AIChatbot() {
     } else {
       stopSpeech();
       try {
+        recognitionRef.current.lang = SPEECH_LANGUAGES[selectedLangKey].speechCode;
         recognitionRef.current.start();
         setIsListening(true);
       } catch (err) {
@@ -190,16 +358,14 @@ export default function AIChatbot() {
       setIsListening(false);
     }
 
-    const timestamp = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const timestamp = getFormattedTimestamp();
 
     const userMessage = {
-      id: `user-${Date.now()}`,
+      id: generateMessageId("user"),
       sender: "user",
       text,
       timestamp,
+      langKey: selectedLangKey,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -211,16 +377,14 @@ export default function AIChatbot() {
 
       const aiResponseText =
         data?.answer || data?.message || "Sorry, I could not generate a response.";
-      const aiMessageId = `ai-${Date.now()}`;
+      const aiMessageId = generateMessageId("ai");
 
       const aiMessage = {
         id: aiMessageId,
         sender: "ai",
         text: aiResponseText,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        timestamp: getFormattedTimestamp(),
+        langKey: selectedLangKey,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -236,13 +400,10 @@ export default function AIChatbot() {
     } catch (error) {
       console.error("AI Response Error:", error);
       const errorMessage = {
-        id: `err-${Date.now()}`,
+        id: generateMessageId("err"),
         sender: "ai",
         text: "I encountered an error processing your request. Please try again.",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        timestamp: getFormattedTimestamp(),
         isError: true,
         originalQuestion: text,
       };
@@ -418,6 +579,7 @@ export default function AIChatbot() {
                           if (speakingMessageId === msg.id) {
                             stopSpeech();
                           } else {
+                            spokenMessagesRef.current.delete(msg.id);
                             speakText(msg.text, msg.id);
                           }
                         }}
@@ -498,6 +660,25 @@ export default function AIChatbot() {
               </div>
             )}
 
+            {/* Speech Language Selector */}
+            <div className="flex items-center justify-between mb-2 px-1 text-xs">
+              <span className="text-gray-400 font-medium">Speech Language:</span>
+              <select
+                value={selectedLangKey}
+                onChange={(e) => {
+                  setSelectedLangKey(e.target.value);
+                  toast.success(`Language set to ${SPEECH_LANGUAGES[e.target.value].label}`);
+                }}
+                className="text-[11px] font-medium bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-900/60 hover:border-indigo-400 rounded-md px-2 py-0.5 transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              >
+                {Object.entries(SPEECH_LANGUAGES).map(([key, lang]) => (
+                  <option key={key} value={key} className="bg-[#09090B] text-gray-200">
+                    {lang.label} ({lang.speechCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex items-end gap-2 bg-white/5 border border-white/10 rounded-xl p-1.5 focus-within:border-indigo-500/50 transition-colors">
               <textarea
                 ref={inputRef}
@@ -548,7 +729,11 @@ export default function AIChatbot() {
       <button
         onClick={() => {
           if (isOpen && speakingMessageId) stopSpeech();
-          setIsOpen((prev) => !prev);
+          const nextOpen = !isOpen;
+          setIsOpen(nextOpen);
+          if (nextOpen) {
+            setHasUnread(false);
+          }
         }}
         className="relative group flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-600 text-white shadow-xl shadow-indigo-600/30 hover:scale-105 transition-all duration-300 cursor-pointer border border-white/20"
         title="Open AI Assistant"
