@@ -3,9 +3,10 @@ import fs from "fs";
 import path from "path";
 
 const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || "gsk_placeholder_key",
   baseURL: "https://api.groq.com/openai/v1",
 });
+
 
 
 export const askGroqModel = async (prompt) => {
@@ -30,7 +31,7 @@ export const askGroqModel = async (prompt) => {
   }
 };
 
-const askToAI = async (question) => {
+export const askToAI = async (question) => {
   try {
     if (!question || !question.trim()) {
       throw new Error("Question is required.");
@@ -60,9 +61,10 @@ const askToAI = async (question) => {
     }
 
     const promptTemplate = fs.readFileSync(
-      path.join(process.cwd(), "docs", "prompt.txt"),
+      promptPath,
       "utf-8"
     );
+
 
     const websiteDocumentation = fs.readFileSync(
       path.join(process.cwd(), "docs", "doc.txt"),

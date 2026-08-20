@@ -408,4 +408,14 @@ export const getProfileCompletionApi = async () => {
   return response.data;
 };
 
+/* ==========================================================================
+   AI ASSISTANT API SERVICES
+   ========================================================================== */
+
+export const askAiApi = async (question) => {
+  const response = await api.post("/ai/chat", { question });
+  return response.data;
+};
+
+
 
