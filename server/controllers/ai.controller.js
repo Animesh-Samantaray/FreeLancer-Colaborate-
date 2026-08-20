@@ -1,57 +1,35 @@
 import { askGroqModel } from "../services/ai.service.js";
+import { askToAI } from "../services/ai.service.js";
 import fs from 'fs';
 import path from 'path';
 
-const current_directory = process.cwd();
 
-const prompt_guide =   fs.readFileSync(
-    path.join(current_directory , 'docs','PromptGuide.md'),
-    'utf-8'
-)
- const websiteKnowledge  =   fs.readFileSync(
-    path.join(current_directory , 'docs','doc.md'),
-    'utf-8'
-)
+export const askAI = async (req, res) => {
+  try {
+    const { question } = req.body;
 
-export const askToAI = async(req,res)=>{
-try {
-    const question = req.body.question;
-
-    if (!question) {
+    if (!question || !question.trim()) {
       return res.status(400).json({
         success: false,
-        message: "question is required.",
+        message: "Question is required.",
       });
     }
 
-        const finalPrompt = `
-${prompt_guide}
+    const answer = await askToAI(question);
 
-Website Documentation:
-
-${websiteKnowledge}
-
-User Question:
-${question}
-`;
-
-const answer = await askGroqModelGrokModel(finalPrompt);
-console.log(answer);
-return res.status(200).json({
+    return res.status(200).json({
       success: true,
       answer,
     });
-
-} catch (error) {
-     console.log(error);
+  } catch (error) {
+    console.error("AI Controller Error:", error);
 
     return res.status(500).json({
       success: false,
       message: "Failed to generate AI response.",
     });
-}
-}
-
+  }
+};
 
 
  
