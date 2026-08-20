@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import AIChatbot from "../components/ai/AIChatbot";
 
 function DashboardLayout() {
   const { user, logout, role } = useAuth();
@@ -90,8 +91,12 @@ function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating AI Chatbot */}
+      <AIChatbot />
     </div>
   );
 }
 
 export default DashboardLayout;
+
